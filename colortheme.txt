@@ -1,9 +1,0 @@
-
-
-Color Palette:
-Blue --> #63cdff
-Green --> #8ef292
-Cream --> #f8f8f8
-Grey --> #efefef
-Green Selection --> #e4f6e5
-Black --> #121421

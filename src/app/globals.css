@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --font-heading: "League Spartan", sans-serif;
+  --font-body: "Public Sans", sans-serif;
+
+  --color-cream: #f8f8f8;
+  --color-primary-blue: #63cdff;
+  --color-primary-green: #8ef292;
+  --color-accent-green: #e4f6e5;
+  --color-text-black: #121421;
+  --color-text-grey: #efefef;
+}
+
+body {
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
