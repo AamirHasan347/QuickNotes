@@ -24,9 +24,10 @@ import {
 
 interface NotesListProps {
   onNoteClick: (note: Note) => void;
+  onOpenMindmap?: (noteId: string) => void;
 }
 
-export function NotesList({ onNoteClick }: NotesListProps) {
+export function NotesList({ onNoteClick, onOpenMindmap }: NotesListProps) {
   const [isClient, setIsClient] = useState(false);
   const { getFilteredNotes, getPinnedNotes, notes, reorderNotes } = useNotesStore();
 
@@ -109,6 +110,7 @@ export function NotesList({ onNoteClick }: NotesListProps) {
                     note={note}
                     onClick={() => onNoteClick(note)}
                     onLinkClick={handleLinkClick}
+                    onOpenMindmap={onOpenMindmap}
                   />
                 ))}
               </div>
@@ -131,6 +133,7 @@ export function NotesList({ onNoteClick }: NotesListProps) {
                     note={note}
                     onClick={() => onNoteClick(note)}
                     onLinkClick={handleLinkClick}
+                    onOpenMindmap={onOpenMindmap}
                   />
                 ))}
               </div>

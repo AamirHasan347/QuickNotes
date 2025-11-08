@@ -7,6 +7,11 @@ export interface NoteVersion {
   timestamp: Date;
 }
 
+export interface MindmapData {
+  nodes: any[]; // React Flow nodes
+  edges: any[]; // React Flow edges
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -17,6 +22,7 @@ export interface Note {
   createdAt: Date;
   updatedAt: Date;
   position?: number; // For drag-and-drop ordering
+  mindmapData?: MindmapData; // Store mindmap structure for reopening
 }
 
 export interface Workspace {

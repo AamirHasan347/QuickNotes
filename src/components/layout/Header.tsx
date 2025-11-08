@@ -1,16 +1,16 @@
 'use client';
 
-import { Moon, Plus, Sun, Maximize2, Minimize2, Network } from 'lucide-react';
+import { Moon, Plus, Sun, Network, PanelLeftOpen } from 'lucide-react';
 import { useState } from 'react';
 
 interface HeaderProps {
   onNewNote: () => void;
-  onToggleFocus: () => void;
-  isFocusMode: boolean;
   onOpenMindmap?: () => void;
+  onToggleFocus?: () => void;
+  isFocusMode?: boolean;
 }
 
-export function Header({ onNewNote, onToggleFocus, isFocusMode, onOpenMindmap }: HeaderProps) {
+export function Header({ onNewNote, onOpenMindmap, onToggleFocus, isFocusMode }: HeaderProps) {
   const [isDark, setIsDark] = useState(false);
 
   const toggleTheme = () => {
@@ -27,14 +27,16 @@ export function Header({ onNewNote, onToggleFocus, isFocusMode, onOpenMindmap }:
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          onClick={onToggleFocus}
-          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          aria-label="Toggle focus mode"
-          title="Focus Mode (Cmd+\)"
-        >
-          {isFocusMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-        </button>
+        {isFocusMode && onToggleFocus && (
+          <button
+            onClick={onToggleFocus}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Exit focus mode"
+            title="Show Sidebar (Cmd+\)"
+          >
+            <PanelLeftOpen className="w-5 h-5" />
+          </button>
+        )}
 
         {onOpenMindmap && (
           <button

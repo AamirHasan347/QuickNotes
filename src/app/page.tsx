@@ -16,8 +16,9 @@ export default function Home() {
   const [isMindmapOpen, setIsMindmapOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | undefined>(undefined);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [existingMindmap, setExistingMindmap] = useState<any>(undefined);
 
-  const { getTodayNote, createTodayNote } = useNotesStore();
+  const { getTodayNote, createTodayNote, notes } = useNotesStore();
 
   const handleOpenEditor = (note?: Note) => {
     setEditingNote(note);
@@ -27,6 +28,23 @@ export default function Home() {
   const handleCloseEditor = () => {
     setIsEditorOpen(false);
     setEditingNote(undefined);
+  };
+
+  const handleOpenMindmap = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId);
+    if (note?.mindmapData) {
+      setExistingMindmap({
+        noteId: note.id,
+        nodes: note.mindmapData.nodes,
+        edges: note.mindmapData.edges,
+      });
+      setIsMindmapOpen(true);
+    }
+  };
+
+  const handleCloseMindmap = () => {
+    setIsMindmapOpen(false);
+    setExistingMindmap(undefined);
   };
 
   // Handle Cmd+K / Ctrl+K for search, Cmd+\ for focus mode
@@ -48,32 +66,39 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-[--color-cream] relative">
-      {/* Focus Mode Overlay */}
-      {isFocusMode && (
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-10 pointer-events-none" />
-      )}
-
       {/* Sidebar - hidden in focus mode */}
-      <div className={`transition-all duration-300 ${isFocusMode ? 'w-0 overflow-hidden' : 'w-64'}`}>
-        <Sidebar
-          onSearchClick={() => setIsSearchOpen(true)}
-          onTodayClick={() => {
-            const todayNote = getTodayNote() || createTodayNote();
-            handleOpenEditor(todayNote);
-          }}
-        />
+      <div className={`relative transition-all duration-500 ease-in-out ${isFocusMode ? 'w-0' : 'w-64'} overflow-hidden`}>
+        <div className="w-64">
+          <Sidebar
+            onSearchClick={() => setIsSearchOpen(true)}
+            onTodayClick={() => {
+              const todayNote = getTodayNote() || createTodayNote();
+              handleOpenEditor(todayNote);
+            }}
+            onToggleFocus={() => setIsFocusMode(!isFocusMode)}
+            isFocusMode={isFocusMode}
+          />
+        </div>
+
+        {/* Focus Mode Overlay - Only on sidebar */}
+        {isFocusMode && (
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm pointer-events-none" />
+        )}
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden relative z-20">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Header
           onNewNote={() => handleOpenEditor()}
+          onOpenMindmap={() => setIsMindmapOpen(true)}
           onToggleFocus={() => setIsFocusMode(!isFocusMode)}
           isFocusMode={isFocusMode}
-          onOpenMindmap={() => setIsMindmapOpen(true)}
         />
 
         <main className="flex-1 overflow-y-auto p-6">
-          <NotesList onNoteClick={handleOpenEditor} />
+          <NotesList
+            onNoteClick={handleOpenEditor}
+            onOpenMindmap={handleOpenMindmap}
+          />
         </main>
       </div>
 
@@ -91,7 +116,8 @@ export default function Home() {
 
       <MindmapEditor
         isOpen={isMindmapOpen}
-        onClose={() => setIsMindmapOpen(false)}
+        onClose={handleCloseMindmap}
+        existingMindmap={existingMindmap}
       />
     </div>
   );

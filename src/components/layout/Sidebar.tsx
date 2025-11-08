@@ -1,7 +1,7 @@
 'use client';
 
 import { useNotesStore } from '@/lib/store/useNotesStore';
-import { Book, Plus, Search, Settings, Calendar } from 'lucide-react';
+import { Book, Plus, Search, Settings, Calendar, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { WorkspaceModal } from './WorkspaceModal';
@@ -9,9 +9,11 @@ import { WorkspaceModal } from './WorkspaceModal';
 interface SidebarProps {
   onSearchClick: () => void;
   onTodayClick: () => void;
+  onToggleFocus: () => void;
+  isFocusMode: boolean;
 }
 
-export function Sidebar({ onSearchClick, onTodayClick }: SidebarProps) {
+export function Sidebar({ onSearchClick, onTodayClick, onToggleFocus, isFocusMode }: SidebarProps) {
   const [isClient, setIsClient] = useState(false);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
   const { workspaces, activeWorkspaceId, setActiveWorkspace, getTodayNote, createTodayNote } = useNotesStore();
@@ -26,7 +28,22 @@ export function Sidebar({ onSearchClick, onTodayClick }: SidebarProps) {
   }, []);
 
   return (
-    <aside className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col">
+    <aside className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col relative">
+      {/* Focus Mode Toggle - Right Edge */}
+      <button
+        onClick={onToggleFocus}
+        className="absolute -right-4 top-1/2 -translate-y-1/2 z-30 bg-white border border-gray-200 rounded-r-lg p-2 shadow-md hover:bg-gray-50 transition-all"
+        aria-label="Toggle focus mode"
+        title="Focus Mode (Cmd+\)"
+      >
+        <ChevronLeft
+          className={cn(
+            "w-5 h-5 transition-transform duration-300",
+            isFocusMode && "rotate-180"
+          )}
+        />
+      </button>
+
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <h1 className="text-2xl font-bold text-[--color-text-black]">

@@ -9,9 +9,10 @@ interface SortableNoteCardProps {
   note: Note;
   onClick: () => void;
   onLinkClick: (noteId: string) => void;
+  onOpenMindmap?: (noteId: string) => void;
 }
 
-export function SortableNoteCard({ note, onClick, onLinkClick }: SortableNoteCardProps) {
+export function SortableNoteCard({ note, onClick, onLinkClick, onOpenMindmap }: SortableNoteCardProps) {
   const {
     attributes,
     listeners,
@@ -34,6 +35,7 @@ export function SortableNoteCard({ note, onClick, onLinkClick }: SortableNoteCar
         note={note}
         onClick={onClick}
         onLinkClick={onLinkClick}
+        onOpenMindmap={onOpenMindmap}
         dragHandleProps={{ ref: setActivatorNodeRef, ...listeners }}
       />
     </div>

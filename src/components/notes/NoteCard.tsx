@@ -1,7 +1,7 @@
 'use client';
 
 import { Note } from '@/lib/store/types';
-import { Pin, Trash2, Link as LinkIcon, GripVertical } from 'lucide-react';
+import { Pin, Trash2, Link as LinkIcon, GripVertical, Network } from 'lucide-react';
 import { useNotesStore } from '@/lib/store/useNotesStore';
 import { cn } from '@/lib/utils';
 import { renderContentWithLinks, extractNoteLinks } from '@/utils/noteLinks';
@@ -10,14 +10,16 @@ interface NoteCardProps {
   note: Note;
   onClick?: () => void;
   onLinkClick?: (noteId: string) => void;
+  onOpenMindmap?: (noteId: string) => void;
   dragHandleProps?: any;
 }
 
-export function NoteCard({ note, onClick, onLinkClick, dragHandleProps }: NoteCardProps) {
+export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandleProps }: NoteCardProps) {
   const { togglePinNote, deleteNote, notes } = useNotesStore();
 
   const links = extractNoteLinks(note.content, notes);
   const hasLinks = links.length > 0;
+  const isMindmap = note.mindmapData !== undefined;
 
   const handleTogglePin = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -28,6 +30,13 @@ export function NoteCard({ note, onClick, onLinkClick, dragHandleProps }: NoteCa
     e.stopPropagation();
     if (confirm('Are you sure you want to delete this note?')) {
       deleteNote(note.id);
+    }
+  };
+
+  const handleOpenMindmap = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onOpenMindmap) {
+      onOpenMindmap(note.id);
     }
   };
 
@@ -48,6 +57,16 @@ export function NoteCard({ note, onClick, onLinkClick, dragHandleProps }: NoteCa
               aria-label="Drag to reorder"
             >
               <GripVertical className="w-4 h-4" />
+            </button>
+          )}
+          {isMindmap && (
+            <button
+              onClick={handleOpenMindmap}
+              className="p-1.5 rounded hover:bg-[--color-primary-blue]/10 text-[--color-primary-blue] transition-colors"
+              aria-label="Open in mindmap editor"
+              title="Open in mindmap editor"
+            >
+              <Network className="w-4 h-4" />
             </button>
           )}
           <button
