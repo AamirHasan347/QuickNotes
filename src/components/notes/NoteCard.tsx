@@ -1,7 +1,7 @@
 'use client';
 
 import { Note } from '@/lib/store/types';
-import { Pin, Trash2, Link as LinkIcon, GripVertical, Network } from 'lucide-react';
+import { Pin, Trash2, Link as LinkIcon, GripVertical, Network, Image } from 'lucide-react';
 import { useNotesStore } from '@/lib/store/useNotesStore';
 import { cn } from '@/lib/utils';
 import { renderContentWithLinks, extractNoteLinks } from '@/utils/noteLinks';
@@ -99,12 +99,44 @@ export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandle
         )}
       </div>
 
-      {hasLinks && (
-        <div className="flex items-center gap-1 text-xs text-[--color-primary-blue] mb-2">
-          <LinkIcon className="w-3 h-3" />
-          <span>{links.length} linked note{links.length > 1 ? 's' : ''}</span>
+      {note.images && note.images.length > 0 && (
+        <div className="flex gap-2 mb-3 overflow-x-auto">
+          {note.images.slice(0, 3).map((image) => (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              key={image.id}
+              src={image.src}
+              alt=""
+              className="w-16 h-16 object-cover rounded border border-gray-200"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+          ))}
+          {note.images.length > 3 && (
+            <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center text-xs text-gray-600">
+              +{note.images.length - 3}
+            </div>
+          )}
         </div>
       )}
+
+      <div className="flex items-center gap-3">
+        {hasLinks && (
+          <div className="flex items-center gap-1 text-xs text-[--color-primary-blue]">
+            <LinkIcon className="w-3 h-3" />
+            <span>{links.length} link{links.length > 1 ? 's' : ''}</span>
+          </div>
+        )}
+
+        {note.images && note.images.length > 0 && (
+          <div className="flex items-center gap-1 text-xs text-gray-500">
+            <Image className="w-3 h-3" />
+            <span>{note.images.length} image{note.images.length > 1 ? 's' : ''}</span>
+          </div>
+        )}
+      </div>
 
       {note.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2">

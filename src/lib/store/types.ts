@@ -12,6 +12,19 @@ export interface MindmapData {
   edges: any[]; // React Flow edges
 }
 
+export interface NoteImage {
+  id: string;
+  src: string;
+  type: 'local' | 'external';
+}
+
+export interface AudioRecording {
+  id: string;
+  src: string;
+  duration: number;
+  createdAt: Date;
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -23,6 +36,8 @@ export interface Note {
   updatedAt: Date;
   position?: number; // For drag-and-drop ordering
   mindmapData?: MindmapData; // Store mindmap structure for reopening
+  images?: NoteImage[]; // Images dropped into the note
+  audioRecordings?: AudioRecording[]; // Voice recordings
 }
 
 export interface Workspace {
