@@ -3,7 +3,7 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { NotesList } from '@/components/notes/NotesList';
-import { NoteEditor } from '@/components/editor/NoteEditor';
+import { EnhancedNoteEditor } from '@/components/editor/EnhancedNoteEditor';
 import { SearchModal } from '@/components/layout/SearchModal';
 import { MindmapEditor } from '@/components/mindmap/MindmapEditor';
 import { useState, useEffect } from 'react';
@@ -102,7 +102,7 @@ export default function Home() {
         </main>
       </div>
 
-      <NoteEditor
+      <EnhancedNoteEditor
         note={editingNote}
         isOpen={isEditorOpen}
         onClose={handleCloseEditor}

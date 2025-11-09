@@ -1,0 +1,247 @@
+/**
+ * Study Assistant Service
+ * Conversational Q&A with notes using RAG (Retrieval-Augmented Generation)
+ */
+
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { MemoryVectorStore } from '@langchain/community/vectorstores/memory';
+import { Document } from '@langchain/core/documents';
+import { PromptTemplate } from '@langchain/core/prompts';
+import { StringOutputParser } from '@langchain/core/output_parsers';
+import { RunnableSequence } from '@langchain/core/runnables';
+import { BaseAIService } from './base-service';
+import { ChatMessage, StudyContext, AIProvider } from './types';
+
+export class StudyAssistantService extends BaseAIService {
+  private vectorStore: MemoryVectorStore | null = null;
+  private embeddings: OpenAIEmbeddings | null = null;
+
+  constructor(provider?: AIProvider) {
+    super(provider);
+  }
+
+  /**
+   * Initialize the vector store with notes
+   */
+  async initializeWithNotes(
+    notes: Array<{ id: string; title: string; content: string; tags: string[] }>
+  ): Promise<void> {
+    this.validateConfig();
+
+    try {
+      // Initialize embeddings
+      this.embeddings = new OpenAIEmbeddings({
+        openAIApiKey: process.env.OPENAI_API_KEY,
+      });
+
+      // Create documents from notes
+      const documents = notes.map(
+        (note) =>
+          new Document({
+            pageContent: `${note.title}\n\n${note.content}`,
+            metadata: {
+              id: note.id,
+              title: note.title,
+              tags: note.tags,
+            },
+          })
+      );
+
+      // Create vector store
+      this.vectorStore = await MemoryVectorStore.fromDocuments(
+        documents,
+        this.embeddings
+      );
+    } catch (error) {
+      const aiError = this.handleError(error, 'initializeWithNotes');
+      throw new Error(aiError.message);
+    }
+  }
+
+  /**
+   * Ask a question with context retrieval
+   */
+  async ask(
+    question: string,
+    conversationHistory: ChatMessage[] = []
+  ): Promise<string> {
+    this.validateConfig();
+
+    if (!this.vectorStore) {
+      throw new Error('Study Assistant not initialized. Call initializeWithNotes first.');
+    }
+
+    try {
+      const llm = this.getLLM('assistant');
+
+      // Retrieve relevant documents
+      const relevantDocs = await this.vectorStore.similaritySearch(question, 3);
+
+      // Format context from retrieved documents
+      const context = relevantDocs
+        .map((doc, i) => `[Document ${i + 1}]\n${doc.pageContent}`)
+        .join('\n\n');
+
+      // Format conversation history
+      const history = conversationHistory
+        .slice(-5) // Only use last 5 messages
+        .map((msg) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n');
+
+      // Create RAG prompt
+      const ragPrompt = PromptTemplate.fromTemplate(`
+You are a helpful study assistant helping a student understand their notes.
+
+Context from notes:
+{context}
+
+Conversation history:
+{history}
+
+Student question: {question}
+
+Instructions:
+- Answer based primarily on the provided context
+- Be clear and educational in your explanations
+- If the context doesn't contain enough information, say so
+- Use examples from the notes when helpful
+- Keep responses concise but informative
+
+Your response:
+`);
+
+      const chain = RunnableSequence.from([
+        ragPrompt,
+        llm,
+        new StringOutputParser(),
+      ]);
+
+      const response = await chain.invoke({
+        context,
+        history: history || 'No previous conversation',
+        question,
+      });
+
+      return response.trim();
+    } catch (error) {
+      const aiError = this.handleError(error, 'ask');
+      throw new Error(aiError.message);
+    }
+  }
+
+  /**
+   * Find related notes based on a topic or question
+   */
+  async findRelatedNotes(
+    query: string,
+    limit: number = 5
+  ): Promise<Array<{ id: string; title: string; similarity: number }>> {
+    if (!this.vectorStore) {
+      throw new Error('Study Assistant not initialized. Call initializeWithNotes first.');
+    }
+
+    try {
+      const results = await this.vectorStore.similaritySearchWithScore(query, limit);
+
+      return results.map(([doc, score]) => ({
+        id: doc.metadata.id,
+        title: doc.metadata.title,
+        similarity: score,
+      }));
+    } catch (error) {
+      const aiError = this.handleError(error, 'findRelatedNotes');
+      throw new Error(aiError.message);
+    }
+  }
+
+  /**
+   * Generate study suggestions based on notes
+   */
+  async generateStudySuggestions(
+    topics: string[]
+  ): Promise<string[]> {
+    this.validateConfig();
+
+    try {
+      const llm = this.getLLM('assistant', 0.8); // Higher temperature for creativity
+
+      const suggestionPrompt = PromptTemplate.fromTemplate(`
+You are a study coach. Given these topics the student is studying, suggest 5 effective study activities:
+
+Topics: {topics}
+
+Provide 5 actionable study suggestions (one per line, no numbering):
+`);
+
+      const chain = suggestionPrompt.pipe(llm).pipe(new StringOutputParser());
+
+      const result = await chain.invoke({
+        topics: topics.join(', '),
+      });
+
+      return result
+        .trim()
+        .split('\n')
+        .filter((s) => s.trim().length > 0);
+    } catch (error) {
+      const aiError = this.handleError(error, 'generateStudySuggestions');
+      throw new Error(aiError.message);
+    }
+  }
+
+  /**
+   * Generate a study plan from notes
+   */
+  async generateStudyPlan(
+    noteIds: string[],
+    durationDays: number = 7
+  ): Promise<any> {
+    this.validateConfig();
+
+    if (!this.vectorStore) {
+      throw new Error('Study Assistant not initialized.');
+    }
+
+    try {
+      const llm = this.getLLM('assistant');
+
+      // Get all documents to understand content
+      const allDocs = await this.vectorStore.similaritySearch('overview', 10);
+      const content = allDocs.map((d) => d.pageContent).join('\n\n');
+
+      const planPrompt = PromptTemplate.fromTemplate(`
+Create a {duration}-day study plan for the following content:
+
+{content}
+
+Return as JSON:
+{{
+  "totalDays": 7,
+  "plan": [
+    {{
+      "day": 1,
+      "title": "Day 1: Introduction",
+      "topics": ["Topic 1", "Topic 2"],
+      "activities": ["Read notes", "Create flashcards"],
+      "duration": "2 hours"
+    }}
+  ]
+}}
+
+Return only valid JSON:
+`);
+
+      const chain = planPrompt.pipe(llm).pipe(new StringOutputParser());
+
+      const result = await chain.invoke({
+        duration: durationDays,
+        content: content.slice(0, 3000), // Limit context
+      });
+
+      return JSON.parse(result.trim());
+    } catch (error) {
+      const aiError = this.handleError(error, 'generateStudyPlan');
+      throw new Error(aiError.message);
+    }
+  }
+}

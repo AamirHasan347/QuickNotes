@@ -114,7 +114,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
         }
-        if (audioContextRef.current) {
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
           audioContextRef.current.close();
         }
 
@@ -176,7 +176,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
-    if (audioContextRef.current) {
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       audioContextRef.current.close();
     }
 
@@ -199,7 +199,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
-      if (audioContextRef.current) {
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close();
       }
     };

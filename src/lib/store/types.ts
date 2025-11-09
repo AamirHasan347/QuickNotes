@@ -25,6 +25,39 @@ export interface AudioRecording {
   createdAt: Date;
 }
 
+export interface Drawing {
+  id: string;
+  data: string; // Base64 encoded canvas image
+  createdAt: Date;
+}
+
+export interface Attachment {
+  id: string;
+  type: 'image' | 'pdf' | 'video' | 'link';
+  src: string;
+  name?: string;
+  meta?: {
+    title?: string;
+    summary?: string;
+    thumbnail?: string;
+    favicon?: string;
+  };
+  createdAt: Date;
+}
+
+export interface NoteLink {
+  targetId: string;
+  targetTitle: string;
+}
+
+export interface ContentBlock {
+  id: string;
+  type: 'text' | 'heading' | 'image' | 'attachment' | 'code' | 'checklist' | 'drawing';
+  content: string;
+  collapsed?: boolean;
+  order: number;
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -38,6 +71,11 @@ export interface Note {
   mindmapData?: MindmapData; // Store mindmap structure for reopening
   images?: NoteImage[]; // Images dropped into the note
   audioRecordings?: AudioRecording[]; // Voice recordings
+  drawings?: Drawing[]; // Handwriting/sketch data
+  attachments?: Attachment[]; // PDFs, videos, links
+  links?: NoteLink[]; // Wiki-style note links
+  blocks?: ContentBlock[]; // Smart block structure
+  useBlocks?: boolean; // Whether to render as blocks or plain content
 }
 
 export interface Workspace {

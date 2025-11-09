@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNotesStore } from '@/lib/store/useNotesStore';
 import { X, ImagePlus } from 'lucide-react';
 import { Note, NoteImage, AudioRecording } from '@/lib/store/types';
@@ -8,6 +8,15 @@ import { VersionHistory } from './VersionHistory';
 import { useImageDrop, ImageDropResult } from '@/hooks/useImageDrop';
 import { VoiceRecorder } from '@/components/audio/VoiceRecorder';
 import { AudioPlayer } from '@/components/audio/AudioPlayer';
+import { useTextSelection } from '@/hooks/useTextSelection';
+import { useAIActions } from '@/hooks/useAIActions';
+import { FloatingAIToolbar, AIAction } from '@/components/ai/FloatingAIToolbar';
+import { AIInlineSuggestion } from '@/components/ai/AIInlineSuggestion';
+import { AIPassiveHint } from '@/components/ai/AIPassiveHint';
+import { AIToolbar } from '@/components/ai/AIToolbar';
+import { MindmapViewer } from '@/components/ai/MindmapViewer';
+import { InteractiveQuiz } from '@/components/ai/InteractiveQuiz';
+import { GeneratedMindmap, Quiz } from '@/lib/ai/types';
 
 interface NoteEditorProps {
   note?: Note;
@@ -24,6 +33,21 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
   const [tagInput, setTagInput] = useState('');
   const [images, setImages] = useState<NoteImage[]>([]);
   const [audioRecordings, setAudioRecordings] = useState<AudioRecording[]>([]);
+
+  // AI Integration
+  const contentAreaRef = useRef<HTMLDivElement>(null);
+  const { selectedText, selectionPosition, clearSelection } = useTextSelection(contentAreaRef);
+  const { isProcessing, currentSuggestion, processAction, clearSuggestion } = useAIActions();
+
+  const [showPassiveHint, setShowPassiveHint] = useState(false);
+  const [passiveHintType, setPassiveHintType] = useState<'summarize' | 'expand' | 'improve'>('summarize');
+
+  // AI Viewers state
+  const [showMindmap, setShowMindmap] = useState(false);
+  const [generatedMindmap, setGeneratedMindmap] = useState<GeneratedMindmap | null>(null);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   // Handle image drops
   const handleImageDrop = (image: ImageDropResult) => {
@@ -53,8 +77,27 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
         setAudioRecordings([]);
       }
       setTagInput('');
+      setShowPassiveHint(false);
+      clearSuggestion();
     }
-  }, [note, isOpen]);
+  }, [note, isOpen, clearSuggestion]);
+
+  // Detect long paragraphs and show passive hints
+  useEffect(() => {
+    if (!content || showPassiveHint) return;
+
+    const paragraphs = content.split('\n\n');
+    const longParagraph = paragraphs.find(p => p.split(' ').length > 100);
+
+    if (longParagraph) {
+      const timer = setTimeout(() => {
+        setShowPassiveHint(true);
+        setPassiveHintType('summarize');
+      }, 5000); // Show after 5 seconds of no typing
+
+      return () => clearTimeout(timer);
+    }
+  }, [content, showPassiveHint]);
 
   const handleSave = () => {
     if (!title.trim() && !content.trim()) {
@@ -110,6 +153,129 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  // AI Action Handlers
+  const handleAIAction = async (action: AIAction) => {
+    if (!selectedText) return;
+    await processAction(action, selectedText);
+    clearSelection();
+  };
+
+  const handleAcceptSuggestion = () => {
+    if (!currentSuggestion) return;
+
+    // Replace selected text with AI suggestion
+    // Since we're using a textarea, we need to handle this carefully
+    setContent(prevContent => {
+      // For now, just append the suggestion at the end
+      // In a rich text editor, you'd replace the selected text
+      return prevContent + '\n\n' + currentSuggestion;
+    });
+
+    clearSuggestion();
+  };
+
+  const handlePassiveHintAccept = async () => {
+    setShowPassiveHint(false);
+
+    // Find the longest paragraph and summarize it
+    const paragraphs = content.split('\n\n');
+    const longParagraph = paragraphs.find(p => p.split(' ').length > 100);
+
+    if (longParagraph) {
+      await processAction('summarize', longParagraph);
+    }
+  };
+
+  // AI Toolbar Handlers
+  const handleGenerateMindmap = async () => {
+    if (!title.trim() && !content.trim()) {
+      alert('Please add some content to generate a mindmap');
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      console.log('Generating mindmap for:', { title, content: content.substring(0, 100) });
+      const response = await fetch('/api/ai/mindmap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title || 'Untitled Note',
+          content
+        }),
+      });
+
+      console.log('Mindmap response status:', response.status);
+      const data = await response.json();
+      console.log('Mindmap data received:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate mindmap');
+      }
+
+      if (data.mindmap) {
+        setGeneratedMindmap(data.mindmap);
+        setShowMindmap(true);
+      } else {
+        throw new Error('No mindmap data in response');
+      }
+    } catch (error) {
+      console.error('Error generating mindmap:', error);
+      alert(`Failed to generate mindmap: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
+  const handleGenerateQuiz = async () => {
+    if (!title.trim() && !content.trim()) {
+      alert('Please add some content to generate a quiz');
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      console.log('Generating quiz for:', { title, content: content.substring(0, 100) });
+      const response = await fetch('/api/ai/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title || 'Untitled Note',
+          content
+        }),
+      });
+
+      console.log('Quiz response status:', response.status);
+      const data = await response.json();
+      console.log('Quiz data received:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate quiz');
+      }
+
+      if (data.quiz) {
+        setGeneratedQuiz(data.quiz);
+        setShowQuiz(true);
+      } else {
+        throw new Error('No quiz data in response');
+      }
+    } catch (error) {
+      console.error('Error generating quiz:', error);
+      alert(`Failed to generate quiz: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
+  const handleSummarizeNote = async () => {
+    if (!content.trim()) {
+      alert('Please add some content to summarize');
+      return;
+    }
+
+    await processAction('summarize', content);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -133,6 +299,7 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
 
         {/* Content */}
         <div
+          ref={contentAreaRef}
           {...dragHandlers}
           className={`flex-1 overflow-y-auto p-6 space-y-4 transition-all ${
             isDragging
@@ -165,6 +332,34 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
             onChange={(e) => setContent(e.target.value)}
             className="w-full min-h-[300px] text-gray-700 placeholder-gray-400 border-none outline-none resize-none"
           />
+
+          {/* AI Passive Hint */}
+          <AIPassiveHint
+            isVisible={showPassiveHint && !isProcessing && !currentSuggestion}
+            message="💡 Would you like me to summarize this section?"
+            type={passiveHintType}
+            onAccept={handlePassiveHintAccept}
+            onDismiss={() => setShowPassiveHint(false)}
+          />
+
+          {/* AI Inline Suggestion */}
+          {isProcessing && (
+            <AIInlineSuggestion
+              suggestion=""
+              isLoading={true}
+              onAccept={() => {}}
+              onReject={() => {}}
+            />
+          )}
+
+          {currentSuggestion && !isProcessing && (
+            <AIInlineSuggestion
+              suggestion={currentSuggestion}
+              isLoading={false}
+              onAccept={handleAcceptSuggestion}
+              onReject={clearSuggestion}
+            />
+          )}
 
           {/* Display images */}
           {images.length > 0 && (
@@ -232,6 +427,14 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
             )}
           </div>
 
+          {/* AI Study Tools */}
+          <AIToolbar
+            onGenerateMindmap={handleGenerateMindmap}
+            onGenerateQuiz={handleGenerateQuiz}
+            onSummarizeNote={handleSummarizeNote}
+            isProcessing={isGeneratingAI}
+          />
+
           <div>
             <input
               type="text"
@@ -278,6 +481,37 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
           </button>
         </div>
       </div>
+
+      {/* AI Floating Toolbar - Rendered outside main dialog to avoid z-index issues */}
+      <FloatingAIToolbar
+        isVisible={!!selectedText && !isProcessing && !currentSuggestion}
+        position={selectionPosition || { x: 0, y: 0 }}
+        onAction={handleAIAction}
+        onClose={clearSelection}
+      />
+
+      {/* Mindmap Viewer */}
+      {showMindmap && generatedMindmap && (
+        <MindmapViewer
+          mindmap={generatedMindmap}
+          onClose={() => {
+            setShowMindmap(false);
+            setGeneratedMindmap(null);
+          }}
+        />
+      )}
+
+      {/* Interactive Quiz */}
+      {showQuiz && generatedQuiz && (
+        <InteractiveQuiz
+          quiz={generatedQuiz}
+          onClose={() => {
+            setShowQuiz(false);
+            setGeneratedQuiz(null);
+          }}
+          onRegenerate={handleGenerateQuiz}
+        />
+      )}
     </div>
   );
 }
