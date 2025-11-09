@@ -1,7 +1,7 @@
 'use client';
 
 import { useNotesStore } from '@/lib/store/useNotesStore';
-import { Book, Plus, Search, Settings, Calendar, ChevronLeft } from 'lucide-react';
+import { Book, Plus, Search, Settings, Calendar, ChevronLeft, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { WorkspaceModal } from './WorkspaceModal';
@@ -16,7 +16,7 @@ interface SidebarProps {
 export function Sidebar({ onSearchClick, onTodayClick, onToggleFocus, isFocusMode }: SidebarProps) {
   const [isClient, setIsClient] = useState(false);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
-  const { workspaces, activeWorkspaceId, setActiveWorkspace, getTodayNote, createTodayNote } = useNotesStore();
+  const { workspaces, activeWorkspaceId, setActiveWorkspace, deleteWorkspace, getTodayNote, createTodayNote } = useNotesStore();
 
   const handleTodayClick = () => {
     const todayNote = getTodayNote() || createTodayNote();
@@ -104,22 +104,38 @@ export function Sidebar({ onSearchClick, onTodayClick, onToggleFocus, isFocusMod
             </button>
 
             {workspaces.map((workspace) => (
-              <button
+              <div
                 key={workspace.id}
-                onClick={() => setActiveWorkspace(workspace.id)}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
-                  isClient && activeWorkspaceId === workspace.id
-                    ? 'bg-[--color-accent-green] text-[--color-text-black] font-medium'
-                    : 'text-gray-700 hover:bg-gray-100'
-                )}
+                className="group relative"
               >
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: workspace.color }}
-                />
-                <span>{workspace.name}</span>
-              </button>
+                <button
+                  onClick={() => setActiveWorkspace(workspace.id)}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                    isClient && activeWorkspaceId === workspace.id
+                      ? 'bg-[--color-accent-green] text-[--color-text-black] font-medium'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  )}
+                >
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: workspace.color }}
+                  />
+                  <span className="flex-1 text-left">{workspace.name}</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Delete workspace "${workspace.name}"?`)) {
+                      deleteWorkspace(workspace.id);
+                    }
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-all"
+                  title="Delete workspace"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                </button>
+              </div>
             ))}
           </div>
         </div>

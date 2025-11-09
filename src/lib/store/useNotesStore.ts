@@ -18,6 +18,7 @@ interface NotesState {
 
   // Workspace actions
   addWorkspace: (workspace: Omit<Workspace, 'id'>) => void;
+  deleteWorkspace: (id: string) => void;
   setActiveWorkspace: (id: string | null) => void;
 
   // Search
@@ -115,6 +116,14 @@ export const useNotesStore = create<NotesState>()(
         };
         set((state) => ({
           workspaces: [...state.workspaces, newWorkspace],
+        }));
+      },
+
+      deleteWorkspace: (id) => {
+        set((state) => ({
+          workspaces: state.workspaces.filter((workspace) => workspace.id !== id),
+          // Reset active workspace if the deleted one was active
+          activeWorkspaceId: state.activeWorkspaceId === id ? null : state.activeWorkspaceId,
         }));
       },
 

@@ -16,8 +16,15 @@ interface UseTextSelectionReturn {
 export function useTextSelection(containerRef: RefObject<HTMLElement>): UseTextSelectionReturn {
   const [selectedText, setSelectedText] = useState('');
   const [selectionPosition, setSelectionPosition] = useState<SelectionPosition | null>(null);
+  const [isMouseDown, setIsMouseDown] = useState(false);
 
   const handleSelectionChange = useCallback(() => {
+    // Only process selection if user is actively selecting (mouse down/up)
+    // This prevents the bubble from showing on right-click or other context menu selections
+    if (!isMouseDown) {
+      return;
+    }
+
     const selection = window.getSelection();
     const text = selection?.toString().trim() || '';
 
@@ -42,7 +49,7 @@ export function useTextSelection(containerRef: RefObject<HTMLElement>): UseTextS
       setSelectedText('');
       setSelectionPosition(null);
     }
-  }, [containerRef]);
+  }, [containerRef, isMouseDown]);
 
   const clearSelection = useCallback(() => {
     setSelectedText('');
@@ -51,9 +58,21 @@ export function useTextSelection(containerRef: RefObject<HTMLElement>): UseTextS
   }, []);
 
   useEffect(() => {
+    const handleMouseDown = () => setIsMouseDown(true);
+    const handleMouseUp = () => {
+      setIsMouseDown(false);
+      // Trigger selection check on mouseup (after drag selection)
+      setTimeout(handleSelectionChange, 10);
+    };
+
     document.addEventListener('selectionchange', handleSelectionChange);
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mouseup', handleMouseUp);
+
     return () => {
       document.removeEventListener('selectionchange', handleSelectionChange);
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [handleSelectionChange]);
 

@@ -84,48 +84,59 @@ export function AttachmentDropzone({
 
   return (
     <div className="space-y-4">
-      {/* Drop Zone */}
-      <div
-        {...getRootProps()}
-        className={`border-2 border-dashed rounded-xl p-6 transition-all cursor-pointer ${
-          isDragActive
-            ? 'border-purple-500 bg-purple-50 scale-105 shadow-lg'
-            : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50'
-        }`}
-      >
-        <input {...getInputProps()} />
-        <div className="text-center">
+      {/* Drop Zone - Show full version when dragging or minimal when not */}
+      <AnimatePresence mode="wait">
+        {isDragActive ? (
           <motion.div
-            animate={isDragActive ? { scale: 1.1, rotate: 5 } : { scale: 1, rotate: 0 }}
+            key="active"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="flex justify-center mb-3"
           >
-            {isDragActive ? (
-              <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center">
-                <Download className="w-8 h-8 text-purple-600" />
+            <div
+              {...getRootProps()}
+              className="border-2 border-dashed rounded-xl p-6 border-purple-500 bg-purple-50 scale-105 shadow-lg cursor-pointer"
+            >
+              <input {...getInputProps()} />
+              <div className="text-center">
+                <motion.div
+                  animate={{ scale: 1.1, rotate: 5 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex justify-center mb-3"
+                >
+                  <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center">
+                    <Download className="w-8 h-8 text-purple-600" />
+                  </div>
+                </motion.div>
+                <p className="text-sm font-medium text-gray-700 mb-1">
+                  Drop files here
+                </p>
+                <p className="text-xs text-gray-500">
+                  Supports images, PDFs, and videos
+                </p>
               </div>
-            ) : (
-              <div className="flex gap-3">
-                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <ImageIcon className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-red-600" />
-                </div>
-                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-                  <Video className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            )}
+            </div>
           </motion.div>
-          <p className="text-sm font-medium text-gray-700 mb-1">
-            {isDragActive ? 'Drop files here' : 'Drag & drop files, or click to browse'}
-          </p>
-          <p className="text-xs text-gray-500">
-            Supports images, PDFs, and videos
-          </p>
-        </div>
-      </div>
+        ) : attachments.length > 0 ? (
+          <motion.div
+            key="minimal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div
+              {...getRootProps()}
+              className="border-2 border-dashed rounded-lg p-3 border-gray-200 hover:border-purple-400 hover:bg-purple-50/30 transition-all cursor-pointer"
+            >
+              <input {...getInputProps()} />
+              <p className="text-xs text-center text-gray-500">
+                Drop more files or click to browse
+              </p>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       {/* Attachments List */}
       <AnimatePresence mode="popLayout">

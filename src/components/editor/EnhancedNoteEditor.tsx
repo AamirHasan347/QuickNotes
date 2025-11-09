@@ -20,7 +20,6 @@ import {
   ContentBlock,
 } from '@/lib/store/types';
 import { VersionHistory } from './VersionHistory';
-import { useImageDrop, ImageDropResult } from '@/hooks/useImageDrop';
 import { VoiceRecorder } from '@/components/audio/VoiceRecorder';
 import { AudioPlayer } from '@/components/audio/AudioPlayer';
 import { useTextSelection } from '@/hooks/useTextSelection';
@@ -30,7 +29,6 @@ import { MindmapViewer } from '@/components/ai/MindmapViewer';
 import { InteractiveQuiz } from '@/components/ai/InteractiveQuiz';
 import { GeneratedMindmap, Quiz } from '@/lib/ai/types';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { SaveIndicator } from './SaveIndicator';
 import { AIActionBubble, AIActionType } from '@/components/ai/AIActionBubble';
 import { AIResultPanel } from '@/components/ai/AIResultPanel';
 import { SketchCanvas } from './SketchCanvas';
@@ -77,18 +75,6 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [aiPanelTitle, setAIPanelTitle] = useState('');
   const [aiPanelContent, setAIPanelContent] = useState('');
-
-  // Image drop handler
-  const handleImageDrop = (image: ImageDropResult) => {
-    const newImage: NoteImage = {
-      id: image.id,
-      src: image.src,
-      type: image.type,
-    };
-    setImages((prev) => [...prev, newImage]);
-  };
-
-  const { isDragging, dragHandlers } = useImageDrop(handleImageDrop);
 
   // Load note data
   useEffect(() => {
@@ -249,19 +235,33 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col"
-        >
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="fixed inset-0 left-auto w-full md:w-[calc(100%-16rem)] bg-white z-40 flex flex-col shadow-2xl"
+          >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {note ? 'Edit Note' : 'New Note'}
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {note ? 'Edit Note' : 'New Note'}
+              </h2>
+              {/* Autosave indicator */}
+              {isSaving ? (
+                <span className="flex items-center gap-2 text-sm text-blue-600">
+                  <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  Saving...
+                </span>
+              ) : lastSaved && (Date.now() - lastSaved.getTime() < 240000) ? (
+                <span className="text-sm text-green-600">
+                  ✓ Autosaved
+                </span>
+              ) : null}
+            </div>
 
             <div className="flex items-center gap-2">
               {/* Sketch Mode Toggle */}
@@ -304,7 +304,6 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
           {/* Content */}
           <div
             ref={contentAreaRef}
-            {...dragHandlers}
             className="flex-1 overflow-y-auto p-6 space-y-6"
           >
             {/* Title Input */}
@@ -467,38 +466,9 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              {isSaving && (
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                  Saving...
-                </div>
-              )}
-              {lastSaved && !isSaving && (
-                <div className="text-green-600">✓ Saved</div>
-              )}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                {note ? 'Update' : 'Create'} Note
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* AI Action Bubble - appears on text selection */}
       <AIActionBubble
@@ -530,6 +500,7 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
       {showMindmap && generatedMindmap && (
         <MindmapViewer
           mindmap={generatedMindmap}
+          noteId={note?.id}
           onClose={() => {
             setShowMindmap(false);
             setGeneratedMindmap(null);
@@ -558,9 +529,6 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
           }}
         />
       )}
-
-      {/* Save Indicator */}
-      <SaveIndicator isSaving={isSaving} lastSaved={lastSaved} />
     </>
   );
 }

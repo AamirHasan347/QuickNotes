@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -11,17 +11,23 @@ import {
   Node,
   Edge,
   BackgroundVariant,
+  EdgeMouseHandler,
 } from '@xyflow/react';
-import { X } from 'lucide-react';
+import { X, Save, Trash2 } from 'lucide-react';
 import { GeneratedMindmap } from '@/lib/ai/types';
+import { useNotesStore } from '@/lib/store/useNotesStore';
 import '@xyflow/react/dist/style.css';
 
 interface MindmapViewerProps {
   mindmap: GeneratedMindmap;
   onClose: () => void;
+  noteId?: string;
 }
 
-export function MindmapViewer({ mindmap, onClose }: MindmapViewerProps) {
+export function MindmapViewer({ mindmap, onClose, noteId }: MindmapViewerProps) {
+  const { updateNote } = useNotesStore();
+  const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
+
   // Convert our mindmap format to ReactFlow format
   const initialNodes: Node[] = mindmap.nodes.map((node) => ({
     id: node.id,
@@ -44,11 +50,52 @@ export function MindmapViewer({ mindmap, onClose }: MindmapViewerProps) {
     source: edge.source,
     target: edge.target,
     animated: true,
-    style: { stroke: '#9333ea', strokeWidth: 2 },
+    style: {
+      stroke: '#9333ea',
+      strokeWidth: 2,
+    },
   }));
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Handle edge click to select it
+  const onEdgeClick: EdgeMouseHandler = useCallback((event, edge) => {
+    setSelectedEdge(edge.id);
+  }, []);
+
+  // Delete selected edge
+  const deleteSelectedEdge = useCallback(() => {
+    if (selectedEdge) {
+      setEdges((eds) => eds.filter((e) => e.id !== selectedEdge));
+      setSelectedEdge(null);
+    }
+  }, [selectedEdge, setEdges]);
+
+  // Save mindmap to note
+  const handleSave = useCallback(() => {
+    if (!noteId) return;
+
+    // Convert back to our mindmap format
+    const updatedMindmap: GeneratedMindmap = {
+      title: mindmap.title,
+      nodes: nodes.map((node) => ({
+        id: node.id,
+        label: String(node.data.label),
+        type: (node.style?.background === '#9333ea' ? 'root' :
+               node.style?.background === '#3b82f6' ? 'branch' : 'leaf') as 'root' | 'branch' | 'leaf',
+        position: node.position,
+      })),
+      edges: edges.map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+      })),
+    };
+
+    updateNote(noteId, { mindmapData: updatedMindmap });
+    alert('Mindmap saved successfully!');
+  }, [noteId, nodes, edges, mindmap.title, updateNote]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
@@ -57,23 +104,51 @@ export function MindmapViewer({ mindmap, onClose }: MindmapViewerProps) {
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{mindmap.title}</h2>
-            <p className="text-sm text-gray-500">AI-Generated Mindmap</p>
+            <p className="text-sm text-gray-500">AI-Generated Mindmap • Click edges to select, then delete</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {selectedEdge && (
+              <button
+                onClick={deleteSelectedEdge}
+                className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Arrow
+              </button>
+            )}
+            {noteId && (
+              <button
+                onClick={handleSave}
+                className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                Save Mindmap
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Mindmap */}
         <div className="flex-1">
           <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={edges.map((edge) => ({
+              ...edge,
+              style: {
+                ...edge.style,
+                stroke: edge.id === selectedEdge ? '#ef4444' : '#9333ea',
+                strokeWidth: edge.id === selectedEdge ? 3 : 2,
+              },
+            }))}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onEdgeClick={onEdgeClick}
             fitView
             attributionPosition="bottom-left"
           >
