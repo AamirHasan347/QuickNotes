@@ -175,6 +175,14 @@ export function NoteLinkInput({ value, onChange, onLinkInsert }: NoteLinkInputPr
     setCursorPosition(e.target.selectionStart);
   };
 
+  // Debug: Log when selection changes
+  const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    const selectedText = target.value.substring(target.selectionStart, target.selectionEnd);
+    console.log('✏️ [NoteLinkInput] Text selected in textarea:', selectedText);
+    console.log('✏️ [NoteLinkInput] Selection range:', { start: target.selectionStart, end: target.selectionEnd });
+  };
+
   const insertLink = (noteTitle: string) => {
     const beforeCursor = value.slice(0, cursorPosition);
     const afterCursor = value.slice(cursorPosition);
@@ -200,14 +208,16 @@ export function NoteLinkInput({ value, onChange, onLinkInsert }: NoteLinkInputPr
   );
 
   return (
-    <div className="relative">
+    <div className="relative h-full">
       <textarea
         ref={inputRef}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        className="w-full min-h-[300px] text-gray-700 placeholder-gray-400 border-none outline-none resize-none"
+        onSelect={handleSelect}
+        className="w-full h-full text-gray-900 text-base leading-relaxed placeholder-gray-400 border-none outline-none resize-none bg-transparent focus:outline-none"
         placeholder="Start writing your note... Type [[ to link to another note"
+        style={{ userSelect: 'text' }}
       />
 
       {/* Autocomplete Suggestions */}

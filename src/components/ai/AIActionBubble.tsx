@@ -1,9 +1,14 @@
-'use client';
+"use client";
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, FileText, Network, Brain, Lightbulb } from 'lucide-react';
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, FileText, Network, Brain, Lightbulb } from "lucide-react";
 
-export type AIActionType = 'summarize' | 'explain' | 'mindmap' | 'quiz' | 'improve';
+export type AIActionType =
+  | "summarize"
+  | "explain"
+  | "mindmap"
+  | "quiz"
+  | "improve";
 
 interface AIActionBubbleProps {
   isVisible: boolean;
@@ -13,20 +18,49 @@ interface AIActionBubbleProps {
 }
 
 const ACTIONS = [
-  { id: 'summarize' as AIActionType, icon: Sparkles, label: 'Summarize', color: 'purple' },
-  { id: 'explain' as AIActionType, icon: Lightbulb, label: 'Explain', color: 'yellow' },
-  { id: 'mindmap' as AIActionType, icon: Network, label: 'Mind Map', color: 'blue' },
-  { id: 'quiz' as AIActionType, icon: Brain, label: 'Create Quiz', color: 'green' },
+  {
+    id: "summarize" as AIActionType,
+    icon: Sparkles,
+    label: "Summarize",
+    color: "purple",
+  },
+  {
+    id: "explain" as AIActionType,
+    icon: Lightbulb,
+    label: "Explain",
+    color: "yellow",
+  },
+  {
+    id: "mindmap" as AIActionType,
+    icon: Network,
+    label: "Mind Map",
+    color: "blue",
+  },
+  {
+    id: "quiz" as AIActionType,
+    icon: Brain,
+    label: "Create Quiz",
+    color: "green",
+  },
 ];
 
-export function AIActionBubble({ isVisible, position, onAction, onClose }: AIActionBubbleProps) {
+export function AIActionBubble({
+  isVisible,
+  position,
+  onAction,
+  onClose,
+}: AIActionBubbleProps) {
+  console.log('🎨 [AIActionBubble] Render - isVisible:', isVisible);
+  console.log('🎨 [AIActionBubble] Position:', position);
+
   return (
     <AnimatePresence>
       {isVisible && (
         <>
           {/* Backdrop to close on click outside */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 bg-black/10"
+            style={{ zIndex: 60 }}
             onClick={onClose}
           />
 
@@ -37,10 +71,10 @@ export function AIActionBubble({ isVisible, position, onAction, onClose }: AIAct
             exit={{ opacity: 0, scale: 0.8, y: 10 }}
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
             style={{
-              position: 'fixed',
+              position: "fixed",
               left: position.x,
               top: position.y - 60,
-              zIndex: 50,
+              zIndex: 100,
             }}
             className="bg-white rounded-xl shadow-2xl border border-purple-200 p-2 flex gap-1"
           >

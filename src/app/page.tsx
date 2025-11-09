@@ -106,6 +106,7 @@ export default function Home() {
         note={editingNote}
         isOpen={isEditorOpen}
         onClose={handleCloseEditor}
+        isFocusMode={isFocusMode}
       />
 
       <SearchModal

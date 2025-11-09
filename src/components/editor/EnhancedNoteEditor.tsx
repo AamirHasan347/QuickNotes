@@ -37,9 +37,10 @@ interface EnhancedNoteEditorProps {
   note?: Note;
   isOpen: boolean;
   onClose: () => void;
+  isFocusMode?: boolean;
 }
 
-export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditorProps) {
+export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false }: EnhancedNoteEditorProps) {
   const { updateNote } = useNotesStore();
 
   // Basic note data
@@ -61,6 +62,28 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
   const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const { selectedText, selectionPosition, clearSelection } = useTextSelection(contentAreaRef);
   const { isProcessing, currentSuggestion, processAction, clearSuggestion } = useAIActions();
+
+  // Debug logging for AI state changes
+  useEffect(() => {
+    console.log('🎯 [EnhancedNoteEditor] Selected text changed:', selectedText);
+    console.log('📍 [EnhancedNoteEditor] Selection position:', selectionPosition);
+    console.log('⚙️ [EnhancedNoteEditor] Is processing:', isProcessing);
+    console.log('👁️ [EnhancedNoteEditor] Bubble should be visible:', !!selectedText && !isProcessing);
+  }, [selectedText, selectionPosition, isProcessing]);
+
+  // Debug logging for contentAreaRef
+  useEffect(() => {
+    console.log('📦 [EnhancedNoteEditor] Content area ref:', contentAreaRef.current);
+    if (contentAreaRef.current) {
+      console.log('✅ [EnhancedNoteEditor] Content area ref is attached');
+      console.log('📐 [EnhancedNoteEditor] Content area dimensions:', {
+        width: contentAreaRef.current.offsetWidth,
+        height: contentAreaRef.current.offsetHeight,
+      });
+    } else {
+      console.log('❌ [EnhancedNoteEditor] Content area ref is NOT attached');
+    }
+  }, [contentAreaRef.current]);
 
   const [showMindmap, setShowMindmap] = useState(false);
   const [generatedMindmap, setGeneratedMindmap] = useState<GeneratedMindmap | null>(null);
@@ -219,26 +242,26 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed inset-0 left-auto w-full md:w-[calc(100%-16rem)] bg-white z-40 flex flex-col shadow-2xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className={`fixed inset-0 ${isFocusMode ? 'left-0' : 'left-0 md:left-64'} bg-white z-50 flex flex-col`}
           >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 md:px-8 py-4 md:py-6 border-b border-gray-200 bg-white">
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-base md:text-lg font-semibold text-gray-900">
                 {note ? 'Edit Note' : 'New Note'}
               </h2>
               {/* Autosave indicator */}
               {isSaving ? (
-                <span className="flex items-center gap-2 text-sm text-blue-600">
+                <span className="hidden sm:flex items-center gap-2 text-sm text-blue-600">
                   <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                   Saving...
                 </span>
               ) : lastSaved && (Date.now() - lastSaved.getTime() < 240000) ? (
-                <span className="text-sm text-green-600">
+                <span className="hidden sm:inline text-sm text-green-600">
                   ✓ Autosaved
                 </span>
               ) : null}
@@ -282,182 +305,170 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
             </div>
           </div>
 
-          {/* Content */}
-          <div
-            ref={contentAreaRef}
-            className="flex-1 overflow-y-auto p-6 space-y-6"
-          >
-            {/* Title Input */}
-            <input
-              type="text"
-              placeholder="Note title..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-2xl font-bold text-gray-900 placeholder-gray-400 border-none outline-none"
-            />
+          {/* Content - No scroll on main container */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex">
+              {/* Left side - Title and Content */}
+              <div className="flex-1 flex flex-col px-4 md:px-8 py-6 md:py-8 overflow-hidden">
+                {/* Title Input */}
+                <input
+                  type="text"
+                  placeholder="Note title..."
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full text-2xl md:text-3xl font-bold text-gray-900 placeholder-gray-400 border-none outline-none bg-transparent mb-6"
+                />
 
-            {/* Content Area - Block Mode or Normal Mode */}
-            {useBlockMode ? (
-              <SmartBlocks blocks={blocks} onChange={setBlocks} />
-            ) : (
-              <NoteLinkInput value={content} onChange={setContent} />
-            )}
-
-            {/* Attachments */}
-            <AttachmentDropzone
-              attachments={attachments}
-              onAddAttachment={(att) => setAttachments([...attachments, att])}
-              onRemoveAttachment={(id) =>
-                setAttachments(attachments.filter((a) => a.id !== id))
-              }
-            />
-
-            {/* Drawings */}
-            {drawings.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-3"
-              >
-                <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                  Drawings ({drawings.length})
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {drawings.map((drawing) => (
-                    <motion.div
-                      key={drawing.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="relative group rounded-lg overflow-hidden border-2 border-gray-200"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={drawing.data}
-                        alt="Drawing"
-                        className="w-full h-40 object-cover"
-                      />
-                      <button
-                        onClick={() => setDrawings(drawings.filter((d) => d.id !== drawing.id))}
-                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </motion.div>
-                  ))}
+                {/* Content Area - Block Mode or Normal Mode - Scrollable */}
+                <div
+                  ref={contentAreaRef}
+                  className="flex-1 overflow-hidden"
+                  style={{ userSelect: 'text' }}
+                  data-selection-container="true"
+                >
+                  {useBlockMode ? (
+                    <SmartBlocks blocks={blocks} onChange={setBlocks} />
+                  ) : (
+                    <NoteLinkInput value={content} onChange={setContent} />
+                  )}
                 </div>
-              </motion.div>
-            )}
 
-            {/* Voice Recordings */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                Voice Notes
-              </h3>
-
-              <VoiceRecorder
-                onSave={(recording) => setAudioRecordings([...audioRecordings, recording])}
-              />
-
-              {audioRecordings.length > 0 && (
-                <div className="space-y-2 mt-3">
-                  {audioRecordings.map((recording) => (
-                    <AudioPlayer
-                      key={recording.id}
-                      recording={recording}
-                      onDelete={() =>
-                        setAudioRecordings(
-                          audioRecordings.filter((r) => r.id !== recording.id)
-                        )
+                {/* Attachments - Below text area but still visible */}
+                {attachments.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <AttachmentDropzone
+                      attachments={attachments}
+                      onAddAttachment={(att) => setAttachments([...attachments, att])}
+                      onRemoveAttachment={(id) =>
+                        setAttachments(attachments.filter((a) => a.id !== id))
                       }
                     />
-                  ))}
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
 
-            {/* AI Study Tools */}
-            <AIToolbar
-              onGenerateMindmap={async () => {
-                setIsGeneratingAI(true);
-                const response = await fetch('/api/ai/mindmap', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ title, content }),
-                });
-                const data = await response.json();
-                if (data.mindmap) {
-                  setGeneratedMindmap(data.mindmap);
-                  setShowMindmap(true);
-                }
-                setIsGeneratingAI(false);
-              }}
-              onGenerateQuiz={async () => {
-                setIsGeneratingAI(true);
-                const response = await fetch('/api/ai/quiz', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ title, content }),
-                });
-                const data = await response.json();
-                if (data.quiz) {
-                  setGeneratedQuiz(data.quiz);
-                  setShowQuiz(true);
-                }
-                setIsGeneratingAI(false);
-              }}
-              onSummarizeNote={async () => {
-                await processAction('summarize', content);
-                setAIPanelTitle('AI Summary');
-                setAIPanelContent(currentSuggestion || '');
-                setShowAIPanel(true);
-              }}
-              isProcessing={isGeneratingAI}
-            />
-
-            {/* Tags */}
-            <div>
-              <input
-                type="text"
-                placeholder="Add tags (press Enter)..."
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleAddTag}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-purple-600 transition-colors"
-              />
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {tags.map((tag) => (
-                    <motion.span
-                      key={tag}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm flex items-center gap-2"
-                    >
-                      {tag}
-                      <button
-                        onClick={() => removeTag(tag)}
-                        className="hover:text-red-600 transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </motion.span>
-                  ))}
-                </div>
-              )}
+                {/* Drawings */}
+                {drawings.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 pt-4 border-t border-gray-200"
+                  >
+                    <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">
+                      Drawings ({drawings.length})
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {drawings.map((drawing) => (
+                        <motion.div
+                          key={drawing.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="relative group rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={drawing.data}
+                            alt="Drawing"
+                            className="w-full h-40 object-cover"
+                          />
+                          <button
+                            onClick={() => setDrawings(drawings.filter((d) => d.id !== drawing.id))}
+                            className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Fixed Bottom Panel - Voice and Tags only */}
+          <div className={`fixed bottom-4 right-4 ${isFocusMode ? 'left-4' : 'left-4 md:left-[17rem]'} bg-white border border-gray-200 rounded-2xl shadow-xl overflow-y-auto max-h-48 z-10`}>
+            <div className="px-6 py-4 space-y-4">
+              {/* Voice Recordings */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Voice Notes
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <VoiceRecorder
+                    onSave={(recording) => setAudioRecordings([...audioRecordings, recording])}
+                  />
+                  {audioRecordings.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto">
+                      {audioRecordings.map((recording) => (
+                        <AudioPlayer
+                          key={recording.id}
+                          recording={recording}
+                          onDelete={() =>
+                            setAudioRecordings(
+                              audioRecordings.filter((r) => r.id !== recording.id)
+                            )
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Tags
+                </h3>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add tags (press Enter)..."
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleAddTag}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
+                  />
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {tags.map((tag) => (
+                        <motion.span
+                          key={tag}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="px-2 py-1 bg-green-50 text-gray-900 rounded-full text-xs font-medium flex items-center gap-1"
+                        >
+                          {tag}
+                          <button
+                            onClick={() => removeTag(tag)}
+                            className="hover:text-red-600 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </motion.span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Action Bubble - appears on text selection */}
+          {isOpen && (
+            <AIActionBubble
+              isVisible={!!selectedText && !isProcessing}
+              position={selectionPosition || { x: 0, y: 0 }}
+              onAction={handleAIAction}
+              onClose={clearSelection}
+            />
+          )}
 
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* AI Action Bubble - appears on text selection */}
-      <AIActionBubble
-        isVisible={!!selectedText && !isProcessing}
-        position={selectionPosition || { x: 0, y: 0 }}
-        onAction={handleAIAction}
-        onClose={clearSelection}
-      />
 
       {/* AI Result Panel */}
       <AIResultPanel
