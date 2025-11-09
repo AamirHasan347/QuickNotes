@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, ReactElement } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { useNotesStore } from '@/lib/store/useNotesStore';
@@ -23,9 +23,9 @@ export function NoteLinkParser({ content, onLinkClick }: NoteLinkParserProps) {
   const [linkPosition, setLinkPosition] = useState({ x: 0, y: 0 });
 
   // Parse [[note]] syntax
-  const parseLinks = (text: string): (string | JSX.Element)[] => {
+  const parseLinks = (text: string): (string | ReactElement)[] => {
     const linkRegex = /\[\[([^\]]+)\]\]/g;
-    const parts: (string | JSX.Element)[] = [];
+    const parts: (string | ReactElement)[] = [];
     let lastIndex = 0;
     let match;
 

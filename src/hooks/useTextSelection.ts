@@ -13,7 +13,7 @@ interface UseTextSelectionReturn {
   clearSelection: () => void;
 }
 
-export function useTextSelection(containerRef: RefObject<HTMLElement>): UseTextSelectionReturn {
+export function useTextSelection(containerRef: RefObject<HTMLElement | null>): UseTextSelectionReturn {
   const [selectedText, setSelectedText] = useState('');
   const [selectionPosition, setSelectionPosition] = useState<SelectionPosition | null>(null);
   const [isMouseDown, setIsMouseDown] = useState(false);

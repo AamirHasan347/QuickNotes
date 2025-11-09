@@ -5,11 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNotesStore } from '@/lib/store/useNotesStore';
 import {
   X,
-  ImagePlus,
   Pencil,
   Blocks as BlocksIcon,
-  Save,
-  MoreVertical,
 } from 'lucide-react';
 import {
   Note,
@@ -43,7 +40,7 @@ interface EnhancedNoteEditorProps {
 }
 
 export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditorProps) {
-  const { addNote, updateNote, activeWorkspaceId } = useNotesStore();
+  const { updateNote } = useNotesStore();
 
   // Basic note data
   const [title, setTitle] = useState('');
@@ -61,7 +58,7 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
   const [showSketchCanvas, setShowSketchCanvas] = useState(false);
 
   // AI state
-  const contentAreaRef = useRef<HTMLDivElement>(null);
+  const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const { selectedText, selectionPosition, clearSelection } = useTextSelection(contentAreaRef);
   const { isProcessing, currentSuggestion, processAction, clearSuggestion } = useAIActions();
 
@@ -128,22 +125,6 @@ export function EnhancedNoteEditor({ note, isOpen, onClose }: EnhancedNoteEditor
     },
     1000
   );
-
-  const handleSave = () => {
-    if (!title.trim() && !content.trim()) return;
-
-    if (note) {
-      updateNote(note.id, noteData);
-    } else {
-      addNote({
-        ...noteData,
-        isPinned: false,
-        workspaceId: activeWorkspaceId || undefined,
-      });
-    }
-
-    onClose();
-  };
 
   // AI Actions
   const handleAIAction = async (action: AIActionType) => {
