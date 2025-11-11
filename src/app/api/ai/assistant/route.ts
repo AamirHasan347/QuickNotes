@@ -6,6 +6,18 @@ const assistants = new Map<string, StudyAssistantService>();
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate API key is configured
+    if (!process.env.OPENROUTER_API_KEY) {
+      console.error('OPENROUTER_API_KEY is not configured');
+      return NextResponse.json(
+        {
+          error: 'AI service is not configured. Please contact the administrator.',
+          code: 'MISSING_API_KEY'
+        },
+        { status: 500 }
+      );
+    }
+
     const { action, sessionId, question, notes, conversationHistory, topics, noteIds, durationDays, query, limit } = await request.json();
 
     const assistant = assistants.get(sessionId) || new StudyAssistantService();
@@ -79,8 +91,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error('Study Assistant error:', error);
+
+    // Provide more specific error messages
+    const errorMessage = error instanceof Error ? error.message : 'Assistant request failed';
+    const isConfigError = errorMessage.includes('API key') || errorMessage.includes('OPENROUTER');
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Assistant request failed' },
+      {
+        error: isConfigError
+          ? 'AI service is not properly configured. Please check your environment variables.'
+          : errorMessage,
+        code: isConfigError ? 'CONFIG_ERROR' : 'PROCESSING_ERROR'
+      },
       { status: 500 }
     );
   }

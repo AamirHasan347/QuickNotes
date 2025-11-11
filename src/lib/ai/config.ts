@@ -38,7 +38,7 @@ export const AI_CONFIG = {
   openrouter: {
     baseURL: 'https://openrouter.ai/api/v1',
     siteName: 'QuickNotes',
-    siteUrl: 'http://localhost:3000',
+    siteUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   },
 } as const;
 
