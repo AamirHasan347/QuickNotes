@@ -76,26 +76,32 @@ export function MindmapViewer({ mindmap, onClose, noteId }: MindmapViewerProps) 
   const handleSave = useCallback(() => {
     if (!noteId) return;
 
-    // Convert back to our mindmap format
-    const updatedMindmap: GeneratedMindmap = {
-      title: mindmap.title,
+    // Convert to React Flow format that MindmapEditor expects
+    const mindmapData = {
       nodes: nodes.map((node) => ({
         id: node.id,
-        label: String(node.data.label),
-        type: (node.style?.background === '#9333ea' ? 'root' :
-               node.style?.background === '#3b82f6' ? 'branch' : 'leaf') as 'root' | 'branch' | 'leaf',
+        type: 'default',
         position: node.position,
+        data: {
+          label: String(node.data.label),
+          background: node.style?.background || '#8ef292',
+          color: node.style?.color || '#ffffff',
+          border: node.style?.border || 'none',
+          fontWeight: node.style?.fontWeight || 'normal',
+        },
       })),
       edges: edges.map((edge) => ({
         id: edge.id,
         source: edge.source,
         target: edge.target,
+        animated: edge.animated,
+        style: edge.style,
       })),
     };
 
-    updateNote(noteId, { mindmapData: updatedMindmap });
+    updateNote(noteId, { mindmapData });
     alert('Mindmap saved successfully!');
-  }, [noteId, nodes, edges, mindmap.title, updateNote]);
+  }, [noteId, nodes, edges, updateNote]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">

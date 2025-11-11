@@ -6,20 +6,29 @@ interface NotesState {
   notes: Note[];
   workspaces: Workspace[];
   activeWorkspaceId: string | null;
+  activeFolderId: string | null;
   searchQuery: string;
   noteVersions: NoteVersion[];
 
   // Note actions
-  addNote: (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  addNote: (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => Note;
   updateNote: (id: string, updates: Partial<Note>) => void;
   deleteNote: (id: string) => void;
   togglePinNote: (id: string) => void;
   reorderNotes: (notes: Note[]) => void;
+  moveNoteToFolder: (noteId: string, folderId: string | null) => void;
 
   // Workspace actions
-  addWorkspace: (workspace: Omit<Workspace, 'id'>) => void;
+  addWorkspace: (workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateWorkspace: (id: string, updates: Partial<Workspace>) => void;
   deleteWorkspace: (id: string) => void;
   setActiveWorkspace: (id: string | null) => void;
+  addFolderToWorkspace: (workspaceId: string, folderId: string) => void;
+  removeFolderFromWorkspace: (workspaceId: string, folderId: string) => void;
+  getWorkspaceFolders: (workspaceId: string) => string[];
+
+  // Folder actions
+  setActiveFolder: (id: string | null) => void;
 
   // Search
   setSearchQuery: (query: string) => void;
@@ -33,8 +42,12 @@ interface NotesState {
   restoreVersion: (noteId: string, versionId: string) => void;
 
   // Getters
-  getFilteredNotes: () => Note[];
+  getAllNotes: () => Note[]; // For global search
+  getNotesInWorkspace: (workspaceId: string) => Note[]; // All notes in workspace (root + all folders)
+  getNotesInFolder: (folderId: string) => Note[]; // Only notes in specific folder
+  getFilteredNotes: () => Note[]; // Legacy - kept for compatibility
   getPinnedNotes: () => Note[];
+  getNotesByFolder: (folderId: string | null) => Note[]; // Legacy
 }
 
 export const useNotesStore = create<NotesState>()(
@@ -42,11 +55,33 @@ export const useNotesStore = create<NotesState>()(
     (set, get) => ({
       notes: [],
       workspaces: [
-        { id: 'physics', name: 'Physics', color: '#63cdff' },
-        { id: 'chemistry', name: 'Chemistry', color: '#8ef292' },
-        { id: 'mathematics', name: 'Mathematics', color: '#ff6b9d' },
+        {
+          id: 'physics',
+          name: 'Physics',
+          color: '#63cdff',
+          folderIds: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'chemistry',
+          name: 'Chemistry',
+          color: '#8ef292',
+          folderIds: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'mathematics',
+          name: 'Mathematics',
+          color: '#ff6b9d',
+          folderIds: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       ],
       activeWorkspaceId: null,
+      activeFolderId: null,
       searchQuery: '',
       noteVersions: [],
 
@@ -58,6 +93,7 @@ export const useNotesStore = create<NotesState>()(
           updatedAt: new Date(),
         };
         set((state) => ({ notes: [newNote, ...state.notes] }));
+        return newNote;
       },
 
       updateNote: (id, updates) => {
@@ -113,9 +149,22 @@ export const useNotesStore = create<NotesState>()(
         const newWorkspace: Workspace = {
           ...workspace,
           id: workspace.name.toLowerCase().replace(/\s+/g, '-'),
+          folderIds: workspace.folderIds || [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
         };
         set((state) => ({
           workspaces: [...state.workspaces, newWorkspace],
+        }));
+      },
+
+      updateWorkspace: (id, updates) => {
+        set((state) => ({
+          workspaces: state.workspaces.map((workspace) =>
+            workspace.id === id
+              ? { ...workspace, ...updates, updatedAt: new Date() }
+              : workspace
+          ),
         }));
       },
 
@@ -131,8 +180,120 @@ export const useNotesStore = create<NotesState>()(
         set({ activeWorkspaceId: id });
       },
 
+      addFolderToWorkspace: (workspaceId, folderId) => {
+        set((state) => ({
+          workspaces: state.workspaces.map((workspace) =>
+            workspace.id === workspaceId
+              ? {
+                  ...workspace,
+                  folderIds: workspace.folderIds.includes(folderId)
+                    ? workspace.folderIds
+                    : [...workspace.folderIds, folderId],
+                  updatedAt: new Date(),
+                }
+              : workspace
+          ),
+        }));
+      },
+
+      removeFolderFromWorkspace: (workspaceId, folderId) => {
+        set((state) => ({
+          workspaces: state.workspaces.map((workspace) =>
+            workspace.id === workspaceId
+              ? {
+                  ...workspace,
+                  folderIds: workspace.folderIds.filter((id) => id !== folderId),
+                  updatedAt: new Date(),
+                }
+              : workspace
+          ),
+        }));
+      },
+
+      getWorkspaceFolders: (workspaceId) => {
+        const workspace = get().workspaces.find((w) => w.id === workspaceId);
+        return workspace?.folderIds || [];
+      },
+
+      moveNoteToFolder: (noteId, folderId) => {
+        set((state) => ({
+          notes: state.notes.map((note) =>
+            note.id === noteId
+              ? { ...note, folderId, updatedAt: new Date() }
+              : note
+          ),
+        }));
+      },
+
+      setActiveFolder: (id) => {
+        set({ activeFolderId: id });
+      },
+
       setSearchQuery: (query) => {
         set({ searchQuery: query });
+      },
+
+      getAllNotes: () => {
+        const { notes, searchQuery } = get();
+        let filtered = notes;
+
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          filtered = filtered.filter(
+            (note) =>
+              note.title.toLowerCase().includes(query) ||
+              note.content.toLowerCase().includes(query) ||
+              note.tags.some((tag) => tag.toLowerCase().includes(query))
+          );
+        }
+
+        return filtered.sort((a, b) => {
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        });
+      },
+
+      getNotesInWorkspace: (workspaceId) => {
+        const { notes } = get();
+        // Need to import useSmartWorkspaceStore to get folder IDs
+        // Import will be added at the top of the file
+        const smartWorkspaceStore = (window as any).__smartWorkspaceStore;
+
+        if (!smartWorkspaceStore) {
+          // Fallback: just get notes with matching workspaceId
+          return notes.filter((note) => note.workspaceId === workspaceId);
+        }
+
+        // Get all folder IDs for this workspace
+        const workspaceFolders = smartWorkspaceStore.getState().getWorkspaceFolders(workspaceId);
+        const folderIds = workspaceFolders.map((f: any) => f.id);
+
+        // Get notes that are either:
+        // 1. At workspace root (workspaceId matches, no folderId)
+        // 2. In any folder under this workspace (folderId in folderIds)
+        const filtered = notes.filter(
+          (note) =>
+            (note.workspaceId === workspaceId && !note.folderId) ||
+            (note.folderId && folderIds.includes(note.folderId))
+        );
+
+        return filtered.sort((a, b) => {
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        });
+      },
+
+      getNotesInFolder: (folderId) => {
+        const { notes } = get();
+        const filtered = notes.filter((note) => note.folderId === folderId);
+
+        return filtered.sort((a, b) => {
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        });
       },
 
       getFilteredNotes: () => {
@@ -160,6 +321,24 @@ export const useNotesStore = create<NotesState>()(
 
       getPinnedNotes: () => {
         return get().notes.filter((note) => note.isPinned);
+      },
+
+      getNotesByFolder: (folderId) => {
+        const { notes, activeWorkspaceId } = get();
+        let filtered = notes.filter((note) => note.folderId === folderId);
+
+        // Also filter by workspace if one is active
+        if (activeWorkspaceId) {
+          filtered = filtered.filter((note) => note.workspaceId === activeWorkspaceId);
+        }
+
+        return filtered.sort((a, b) => {
+          // Pinned notes first
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          // Then by updated date (newest first)
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        });
       },
 
       getTodayNote: () => {

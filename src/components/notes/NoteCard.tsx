@@ -5,6 +5,7 @@ import { Pin, Trash2, Link as LinkIcon, GripVertical, Network, Image } from 'luc
 import { useNotesStore } from '@/lib/store/useNotesStore';
 import { cn } from '@/lib/utils';
 import { renderContentWithLinks, extractNoteLinks } from '@/utils/noteLinks';
+import { useState, useEffect } from 'react';
 
 interface NoteCardProps {
   note: Note;
@@ -16,10 +17,19 @@ interface NoteCardProps {
 
 export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandleProps }: NoteCardProps) {
   const { togglePinNote, deleteNote, notes } = useNotesStore();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const links = extractNoteLinks(note.content, notes);
   const hasLinks = links.length > 0;
   const isMindmap = note.mindmapData !== undefined;
+
+  // Get total image count from both legacy images and new inlineImages
+  const totalImages = (note.images?.length || 0) + (note.inlineImages?.length || 0);
+  const allImages = [...(note.images || []), ...(note.inlineImages || [])];
 
   const handleTogglePin = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -99,9 +109,9 @@ export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandle
         )}
       </div>
 
-      {note.images && note.images.length > 0 && (
+      {totalImages > 0 && (
         <div className="flex gap-2 mb-3 overflow-x-auto">
-          {note.images.slice(0, 3).map((image) => (
+          {allImages.slice(0, 3).map((image) => (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               key={image.id}
@@ -114,9 +124,9 @@ export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandle
               }}
             />
           ))}
-          {note.images.length > 3 && (
+          {totalImages > 3 && (
             <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center text-xs text-gray-600">
-              +{note.images.length - 3}
+              +{totalImages - 3}
             </div>
           )}
         </div>
@@ -130,10 +140,10 @@ export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandle
           </div>
         )}
 
-        {note.images && note.images.length > 0 && (
+        {totalImages > 0 && (
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <Image className="w-3 h-3" />
-            <span>{note.images.length} image{note.images.length > 1 ? 's' : ''}</span>
+            <span>{totalImages} image{totalImages > 1 ? 's' : ''}</span>
           </div>
         )}
       </div>
@@ -152,7 +162,7 @@ export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandle
       )}
 
       <div className="text-xs text-gray-400">
-        {new Date(note.updatedAt).toLocaleDateString()}
+        {isClient ? new Date(note.updatedAt).toLocaleDateString() : ''}
       </div>
     </div>
   );

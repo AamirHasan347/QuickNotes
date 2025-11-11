@@ -5,6 +5,7 @@
 
 export { NoteSummarizerService } from './summarizer';
 export { MindmapGeneratorService } from './mindmap-generator';
+export { MindmapOrganizerService } from './mindmap-organizer';
 export { QuizMakerService } from './quiz-maker';
 export { StudyAssistantService } from './study-assistant';
 export { TranscriptionService } from './transcription';
@@ -15,6 +16,7 @@ export * from './config';
 // Singleton instances for convenience
 let summarizerInstance: any = null;
 let mindmapInstance: any = null;
+let mindmapOrganizerInstance: any = null;
 let quizInstance: any = null;
 let assistantInstance: any = null;
 let transcriptionInstance: any = null;
@@ -57,4 +59,12 @@ export function getTranscriptionService() {
     transcriptionInstance = new TranscriptionService();
   }
   return transcriptionInstance;
+}
+
+export function getMindmapOrganizer() {
+  if (!mindmapOrganizerInstance) {
+    const { MindmapOrganizerService } = require('./mindmap-organizer');
+    mindmapOrganizerInstance = new MindmapOrganizerService();
+  }
+  return mindmapOrganizerInstance;
 }

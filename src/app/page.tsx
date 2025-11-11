@@ -3,12 +3,15 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { NotesList } from '@/components/notes/NotesList';
+import { SplashScreen } from '@/components/notes/SplashScreen';
 import { EnhancedNoteEditor } from '@/components/editor/EnhancedNoteEditor';
 import { SearchModal } from '@/components/layout/SearchModal';
 import { MindmapEditor } from '@/components/mindmap/MindmapEditor';
+import { MigrationChecker } from '@/components/migrations/MigrationChecker';
 import { useState, useEffect } from 'react';
 import { Note } from '@/lib/store/types';
 import { useNotesStore } from '@/lib/store/useNotesStore';
+import { useSmartWorkspaceStore } from '@/lib/store/useSmartWorkspaceStore';
 
 export default function Home() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -18,11 +21,44 @@ export default function Home() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [existingMindmap, setExistingMindmap] = useState<any>(undefined);
 
-  const { getTodayNote, createTodayNote, notes } = useNotesStore();
+  const { getTodayNote, createTodayNote, notes, addNote } = useNotesStore();
+  const { activeWorkspaceId, activeFolderId } = useSmartWorkspaceStore();
+
+  const [showAddWorkspaceModal, setShowAddWorkspaceModal] = useState(false);
 
   const handleOpenEditor = (note?: Note) => {
     setEditingNote(note);
     setIsEditorOpen(true);
+  };
+
+  const handleNewNote = () => {
+    // Create note with correct context based on selection
+    const newNoteData: any = {
+      title: '',
+      content: '',
+      tags: [],
+      isPinned: false,
+    };
+
+    // If folder is selected, note belongs to that folder
+    if (activeFolderId) {
+      newNoteData.folderId = activeFolderId;
+    }
+    // If only workspace is selected, note belongs to workspace root
+    else if (activeWorkspaceId) {
+      newNoteData.workspaceId = activeWorkspaceId;
+    }
+    // If nothing is selected, don't create note (should prompt user)
+    else {
+      alert('Please select a workspace or folder first');
+      return;
+    }
+
+    // Add the note to the store and get the created note
+    const createdNote = addNote(newNoteData);
+
+    // Open the editor with the new note
+    handleOpenEditor(createdNote);
   };
 
   const handleCloseEditor = () => {
@@ -88,17 +124,24 @@ export default function Home() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
-          onNewNote={() => handleOpenEditor()}
+          onNewNote={handleNewNote}
           onOpenMindmap={() => setIsMindmapOpen(true)}
           onToggleFocus={() => setIsFocusMode(!isFocusMode)}
           isFocusMode={isFocusMode}
         />
 
         <main className="flex-1 overflow-y-auto p-6">
-          <NotesList
-            onNoteClick={handleOpenEditor}
-            onOpenMindmap={handleOpenMindmap}
-          />
+          {!activeWorkspaceId && !activeFolderId ? (
+            <SplashScreen
+              onNoteClick={handleOpenEditor}
+              onCreateWorkspace={() => setShowAddWorkspaceModal(true)}
+            />
+          ) : (
+            <NotesList
+              onNoteClick={handleOpenEditor}
+              onOpenMindmap={handleOpenMindmap}
+            />
+          )}
         </main>
       </div>
 
@@ -120,6 +163,9 @@ export default function Home() {
         onClose={handleCloseMindmap}
         existingMindmap={existingMindmap}
       />
+
+      {/* Migration Checker - Runs on app startup */}
+      <MigrationChecker />
     </div>
   );
 }

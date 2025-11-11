@@ -1,6 +1,7 @@
 'use client';
 
 import { useNotesStore } from '@/lib/store/useNotesStore';
+import { useSmartWorkspaceStore } from '@/lib/store/useSmartWorkspaceStore';
 import { NoteCard } from './NoteCard';
 import { SortableNoteCard } from './SortableNoteCard';
 import { FileText } from 'lucide-react';
@@ -29,7 +30,8 @@ interface NotesListProps {
 
 export function NotesList({ onNoteClick, onOpenMindmap }: NotesListProps) {
   const [isClient, setIsClient] = useState(false);
-  const { getFilteredNotes, getPinnedNotes, notes, reorderNotes } = useNotesStore();
+  const { getNotesInWorkspace, getNotesInFolder, notes, reorderNotes } = useNotesStore();
+  const { activeWorkspaceId, activeFolderId } = useSmartWorkspaceStore();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -72,8 +74,19 @@ export function NotesList({ onNoteClick, onOpenMindmap }: NotesListProps) {
     );
   }
 
-  const pinnedNotes = getPinnedNotes();
-  const allNotes = getFilteredNotes();
+  // Get notes based on active context
+  let allNotes: Note[] = [];
+
+  if (activeFolderId) {
+    // Folder selected: show only notes in that folder
+    allNotes = getNotesInFolder(activeFolderId);
+  } else if (activeWorkspaceId) {
+    // Workspace selected (no folder): show all notes in workspace (root + all folders)
+    allNotes = getNotesInWorkspace(activeWorkspaceId);
+  }
+  // If neither is selected, allNotes remains empty (splash screen will show)
+
+  const pinnedNotes = allNotes.filter(note => note.isPinned);
   const unpinnedNotes = allNotes.filter(note => !note.isPinned);
 
   if (allNotes.length === 0) {

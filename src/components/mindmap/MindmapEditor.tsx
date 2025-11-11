@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -17,10 +17,16 @@ import {
   Handle,
   Position,
   ConnectionMode,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Sparkles, Undo2, Redo2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useNotesStore } from '@/lib/store/useNotesStore';
+import { useSettingsStore } from '@/lib/store/useSettingsStore';
+import { MindmapOrganizerService, NodeCluster } from '@/lib/ai/mindmap-organizer';
+import { OrganizingModal } from './OrganizingModal';
+import { ClusterLabel } from './ClusterLabel';
 
 // Define node data type
 interface NodeData extends Record<string, unknown> {
@@ -135,19 +141,91 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
   const [mindmapTitle, setMindmapTitle] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const { addNote, updateNote } = useNotesStore();
+  const { settings } = useSettingsStore();
+
+  // AI Organize state
+  const [isOrganizing, setIsOrganizing] = useState(false);
+  const [organizingStage, setOrganizingStage] = useState<'analyzing' | 'clustering' | 'organizing' | 'complete'>('analyzing');
+  const [organizingProgress, setOrganizingProgress] = useState(0);
+  const [clusters, setClusters] = useState<NodeCluster[]>([]);
+
+  // Undo/Redo state
+  const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isUndoRedoAction = useRef(false);
+
+  const organizerService = useRef(new MindmapOrganizerService());
 
   // Initialize with existing mindmap or create new one
   useEffect(() => {
     if (isOpen) {
       if (existingMindmap) {
-        // Load existing mindmap
-        const nodesWithCallbacks = existingMindmap.nodes.map(node => ({
-          ...node,
-          data: {
-            ...node.data,
-            onLabelChange: handleNodeLabelChange,
-          },
-        }));
+        // Load existing mindmap - handle both old AI format and new React Flow format
+        const nodesWithCallbacks = existingMindmap.nodes.map(node => {
+          // Check if this is old AI format (has label at root level instead of in data)
+          const isOldFormat = 'label' in node && 'type' in node && !node.data;
+
+          if (isOldFormat) {
+            // Migrate old AI-generated mindmap format
+            const oldNode = node as any;
+            const nodeType = oldNode.type || 'leaf';
+            const background = nodeType === 'root' ? '#9333ea' :
+                              nodeType === 'branch' ? '#3b82f6' : '#10b981';
+            const color = '#ffffff';
+            const fontWeight = nodeType === 'root' ? 'bold' : 'normal';
+
+            return {
+              id: oldNode.id,
+              type: 'default',
+              position: oldNode.position || { x: 0, y: 0 },
+              data: {
+                label: oldNode.label || '',
+                background,
+                color,
+                border: 'none',
+                fontWeight,
+                onLabelChange: handleNodeLabelChange,
+              } as NodeData,
+              style: {
+                background,
+                color,
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 15px',
+                fontSize: '14px',
+                fontWeight,
+              },
+            } as Node<NodeData>;
+          } else {
+            // New React Flow format
+            const background = node.data?.background || '#8ef292';
+            const color = node.data?.color || '#121421';
+            const border = node.data?.border || '1px solid #121421';
+            const fontWeight = node.data?.fontWeight || 'normal';
+
+            return {
+              ...node,
+              data: {
+                label: node.data?.label || '',
+                background,
+                color,
+                border,
+                fontWeight,
+                onLabelChange: handleNodeLabelChange,
+              } as NodeData,
+              style: {
+                background,
+                color,
+                border,
+                borderRadius: '8px',
+                padding: '10px 15px',
+                fontSize: '14px',
+                fontWeight,
+              },
+            } as Node<NodeData>;
+          }
+        });
+
         setNodes(nodesWithCallbacks);
         setEdges(existingMindmap.edges);
         setEditingNoteId(existingMindmap.noteId);
@@ -197,6 +275,139 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
     [setEdges]
   );
 
+  // Save to history for undo/redo
+  const saveToHistory = useCallback(() => {
+    if (isUndoRedoAction.current) {
+      isUndoRedoAction.current = false;
+      return;
+    }
+
+    setHistory((prev) => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push({ nodes, edges });
+      // Keep only last 20 states
+      return newHistory.slice(-20);
+    });
+    setHistoryIndex((prev) => Math.min(prev + 1, 19));
+  }, [nodes, edges, historyIndex]);
+
+  // Undo
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      isUndoRedoAction.current = true;
+      const prevState = history[historyIndex - 1];
+      setNodes(prevState.nodes as Node<NodeData>[]);
+      setEdges(prevState.edges);
+      setHistoryIndex(historyIndex - 1);
+    }
+  }, [history, historyIndex, setNodes, setEdges]);
+
+  // Redo
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      isUndoRedoAction.current = true;
+      const nextState = history[historyIndex + 1];
+      setNodes(nextState.nodes as Node<NodeData>[]);
+      setEdges(nextState.edges);
+      setHistoryIndex(historyIndex + 1);
+    }
+  }, [history, historyIndex, setNodes, setEdges]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + Z for undo
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      // Cmd/Ctrl + Shift + Z for redo
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, handleUndo, handleRedo]);
+
+  // AI Auto-Organize
+  const handleAutoOrganize = useCallback(async () => {
+    if (nodes.length < 2) {
+      alert('Add at least 2 nodes to organize');
+      return;
+    }
+
+    saveToHistory();
+    setIsOrganizing(true);
+    setOrganizingStage('analyzing');
+    setOrganizingProgress(0);
+
+    try {
+      // Stage 1: Analyze and cluster
+      setOrganizingProgress(20);
+      const foundClusters = await organizerService.current.analyzeAndCluster(nodes);
+
+      setOrganizingStage('clustering');
+      setOrganizingProgress(50);
+
+      await new Promise(resolve => setTimeout(resolve, 800)); // Smooth transition
+
+      // Stage 2: Organize layout
+      setOrganizingStage('organizing');
+      setOrganizingProgress(70);
+
+      const organized = organizerService.current.organizeWithForceLayout(
+        nodes,
+        foundClusters,
+        edges
+      );
+
+      setOrganizingProgress(90);
+
+      // Stage 3: Apply changes with smooth animation
+      setClusters(organized.clusters);
+
+      // Update nodes with animation
+      const nodesWithCallbacks = organized.nodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          label: node.data.label || '',
+          onLabelChange: handleNodeLabelChange,
+        } as NodeData,
+      })) as Node<NodeData>[];
+
+      setNodes(nodesWithCallbacks);
+      setOrganizingProgress(100);
+
+      // Show complete stage
+      setOrganizingStage('complete');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      setIsOrganizing(false);
+    } catch (error) {
+      console.error('Error organizing mindmap:', error);
+      alert('Failed to organize mindmap. Please check your AI configuration.');
+      setIsOrganizing(false);
+    }
+  }, [nodes, edges, setNodes, handleNodeLabelChange, saveToHistory]);
+
+  // Handle cluster name change
+  const handleClusterNameChange = useCallback((clusterId: string, newName: string) => {
+    setClusters(prev =>
+      prev.map(cluster =>
+        cluster.id === clusterId ? { ...cluster, name: newName } : cluster
+      )
+    );
+  }, []);
+
   const addNode = useCallback(() => {
     const newNode: Node<NodeData> = {
       id: nodeIdCounter.toString(),
@@ -213,7 +424,13 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
 
     setNodes((nds) => [...nds, newNode]);
     setNodeIdCounter((id) => id + 1);
-  }, [nodeIdCounter, setNodes, handleNodeLabelChange]);
+    saveToHistory();
+
+    // Auto-organize if enabled
+    if (settings.mindmapAutoOrganizeOnAdd && nodes.length >= 3) {
+      setTimeout(() => handleAutoOrganize(), 500);
+    }
+  }, [nodeIdCounter, setNodes, handleNodeLabelChange, saveToHistory, settings.mindmapAutoOrganizeOnAdd, nodes.length, handleAutoOrganize]);
 
   const handleSave = useCallback(() => {
     // Convert mindmap to markdown format for preview
@@ -278,10 +495,59 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-[--color-text-black]">
-            Mindmap Editor
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold text-[--color-text-black]">
+              Mindmap Editor
+            </h2>
+
+            {/* Undo/Redo */}
+            <div className="flex items-center gap-1 border-l pl-4">
+              <button
+                onClick={handleUndo}
+                disabled={historyIndex <= 0}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Undo (Cmd+Z)"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleRedo}
+                disabled={historyIndex >= history.length - 1}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Redo (Cmd+Shift+Z)"
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2">
+            {/* AI Auto-Organize Button */}
+            <motion.button
+              onClick={handleAutoOrganize}
+              disabled={isOrganizing || nodes.length < 2}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[--color-primary-blue] to-[--color-primary-green] text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+            >
+              {/* Glowing effect */}
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.5, 0.8, 0.5],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+                className="absolute inset-0 bg-white/20 rounded-lg blur-sm"
+              />
+
+              <Sparkles className="w-4 h-4 relative z-10" />
+              <span className="text-sm font-medium relative z-10">Auto-Organize</span>
+            </motion.button>
+
             <button
               onClick={addNode}
               className="flex items-center gap-2 px-3 py-1.5 bg-[--color-primary-green] text-[--color-text-black] rounded-lg hover:opacity-90 transition-opacity text-sm"
@@ -317,6 +583,22 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
             />
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
           </ReactFlow>
+
+          {/* Cluster Labels Overlay */}
+          {clusters.length > 0 && (
+            <div className="absolute inset-0 pointer-events-none">
+              {clusters.map(cluster => (
+                <ClusterLabel
+                  key={cluster.id}
+                  clusterId={cluster.id}
+                  name={cluster.name}
+                  color={cluster.color}
+                  position={cluster.position}
+                  onNameChange={handleClusterNameChange}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -324,6 +606,9 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
               <p>💡 <strong>Tip:</strong> Double-click nodes to edit. Drag nodes to move them. Click and drag between nodes to create connections.</p>
+              {settings.mindmapAutoOrganizeOnAdd && (
+                <p className="mt-1 text-xs text-[--color-primary-green]">✨ Auto-organize is enabled</p>
+              )}
             </div>
             <button
               onClick={handleSave}
@@ -334,6 +619,14 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
           </div>
         </div>
       </div>
+
+      {/* Organizing Modal */}
+      <OrganizingModal
+        isOpen={isOrganizing}
+        stage={organizingStage}
+        progress={organizingProgress}
+        clustersFound={clusters.length}
+      />
     </div>
   );
 }
