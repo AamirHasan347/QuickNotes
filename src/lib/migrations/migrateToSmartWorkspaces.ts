@@ -236,7 +236,7 @@ function validateMigration(
     }
 
     // Check depth is valid (1-3)
-    if (folder.depth < 1 || folder.depth > 3) {
+    if (folder.depth !== undefined && (folder.depth < 1 || folder.depth > 3)) {
       errors.push(`Folder "${folder.name}" has invalid depth ${folder.depth}`);
     }
 

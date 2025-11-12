@@ -152,7 +152,7 @@ export const useSmartWorkspaceStore = create<SmartWorkspaceState>()(
         if (parentId) {
           const parent = get().getFolderById(parentId);
           if (parent) {
-            depth = parent.depth + 1;
+            depth = (parent.depth ?? 1) + 1;
           }
         }
 
@@ -237,7 +237,7 @@ export const useSmartWorkspaceStore = create<SmartWorkspaceState>()(
         if (newParentId) {
           const newParent = get().getFolderById(newParentId);
           if (newParent) {
-            newDepth = newParent.depth + 1;
+            newDepth = (newParent.depth ?? 1) + 1;
           }
         }
 
@@ -362,7 +362,7 @@ export const useSmartWorkspaceStore = create<SmartWorkspaceState>()(
 
       canAddSubfolder: (parentId) => {
         const parent = get().getFolderById(parentId);
-        return parent ? parent.depth < MAX_FOLDER_DEPTH : false;
+        return parent ? (parent.depth ?? 1) < MAX_FOLDER_DEPTH : false;
       },
     }),
     {

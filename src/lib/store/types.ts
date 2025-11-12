@@ -117,12 +117,12 @@ export interface SmartWorkspace {
 export interface Folder {
   id: string;
   name: string;
-  workspaceId: string; // Required - which workspace this folder tree belongs to
+  workspaceId?: string; // Optional - which workspace this folder tree belongs to (for backwards compatibility)
   parentId?: string | null; // null = direct child of workspace, otherwise parent folder ID
   color?: string; // Optional color tag for visual organization
   isPinned?: boolean; // Pin important folders to the top
   order: number; // For custom ordering
-  depth: number; // 1 = workspace child, 2 = subfolder, 3 = sub-subfolder (max 3)
+  depth?: number; // 1 = workspace child, 2 = subfolder, 3 = sub-subfolder (max 3) - optional for backwards compatibility
   createdAt: Date;
   updatedAt: Date;
 }

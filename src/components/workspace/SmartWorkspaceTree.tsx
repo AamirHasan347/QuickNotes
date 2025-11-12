@@ -110,7 +110,7 @@ export function SmartWorkspaceTree() {
                         isPinned={folder.isPinned}
                         workspaceId={workspace.id}
                         parentId={folder.parentId || null}
-                        depth={folder.depth}
+                        depth={folder.depth ?? 1}
                         onClick={() => {
                           setActiveWorkspace(workspace.id);
                           setActiveFolder(folder.id);

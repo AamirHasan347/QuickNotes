@@ -33,6 +33,7 @@ export default function RootLayout({
     >
       <body className="bg-[--color-cream] text-[--color-text-black] antialiased">
         {children}
+        <Analytics />
       </body>
     </html>
   );

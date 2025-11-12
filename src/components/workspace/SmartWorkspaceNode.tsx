@@ -367,10 +367,12 @@ export function SmartWorkspaceNode({
                 isPinned={subfolder.isPinned}
                 workspaceId={subfolder.workspaceId}
                 parentId={subfolder.parentId || null}
-                depth={subfolder.depth}
+                depth={subfolder.depth ?? 1}
                 onClick={() => {
                   // Set active workspace and folder when subfolder is clicked
-                  setActiveWorkspace(subfolder.workspaceId);
+                  if (subfolder.workspaceId) {
+                    setActiveWorkspace(subfolder.workspaceId);
+                  }
                   setActiveFolder(subfolder.id);
                 }}
               />
