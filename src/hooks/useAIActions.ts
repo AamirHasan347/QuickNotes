@@ -29,6 +29,9 @@ export function useAIActions(): UseAIActionsReturn {
         case 'summarize':
           prompt = `Summarize the following text in 2-3 concise sentences:\n\n${text}`;
           break;
+        case 'explain':
+          prompt = `Explain the following text in simple, clear language. Break down complex concepts and provide context:\n\n${text}`;
+          break;
         case 'expand':
           prompt = `Expand on the following text by adding more details, examples, and explanations while keeping the same style:\n\n${text}`;
           break;
@@ -49,11 +52,13 @@ export function useAIActions(): UseAIActionsReturn {
       });
 
       if (!response.ok) {
-        throw new Error('AI processing failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'AI processing failed');
       }
 
       const data = await response.json();
-      setCurrentSuggestion(data.summary || 'No suggestion generated');
+      const suggestion = data.summary || 'No suggestion generated';
+      setCurrentSuggestion(suggestion);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process');
       setCurrentSuggestion(null);

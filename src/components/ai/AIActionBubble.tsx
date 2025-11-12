@@ -1,13 +1,14 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, FileText, Network, Brain, Lightbulb } from "lucide-react";
+import { Sparkles, FileText, Network, Brain, Lightbulb, Layers } from "lucide-react";
 
 export type AIActionType =
   | "summarize"
   | "explain"
   | "mindmap"
   | "quiz"
+  | "flashcards"
   | "improve";
 
 interface AIActionBubbleProps {
@@ -42,6 +43,12 @@ const ACTIONS = [
     label: "Create Quiz",
     color: "green",
   },
+  {
+    id: "flashcards" as AIActionType,
+    icon: Layers,
+    label: "Flashcards",
+    color: "amber",
+  },
 ];
 
 export function AIActionBubble({
@@ -50,9 +57,6 @@ export function AIActionBubble({
   onAction,
   onClose,
 }: AIActionBubbleProps) {
-  console.log('🎨 [AIActionBubble] Render - isVisible:', isVisible);
-  console.log('🎨 [AIActionBubble] Position:', position);
-
   return (
     <AnimatePresence>
       {isVisible && (

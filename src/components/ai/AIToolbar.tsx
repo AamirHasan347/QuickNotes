@@ -1,17 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles, Network, Brain, FileQuestion, Loader2 } from 'lucide-react';
+import { Sparkles, Network, Brain, FileQuestion, Loader2, Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface AIToolbarProps {
   onGenerateMindmap: () => void;
   onGenerateQuiz: () => void;
   onSummarizeNote: () => void;
+  onGenerateFlashcards: () => void;
   isProcessing?: boolean;
 }
 
-export function AIToolbar({ onGenerateMindmap, onGenerateQuiz, onSummarizeNote, isProcessing = false }: AIToolbarProps) {
+export function AIToolbar({ onGenerateMindmap, onGenerateQuiz, onSummarizeNote, onGenerateFlashcards, isProcessing = false }: AIToolbarProps) {
   const [activeAction, setActiveAction] = useState<string | null>(null);
 
   const actions = [
@@ -48,6 +49,17 @@ export function AIToolbar({ onGenerateMindmap, onGenerateQuiz, onSummarizeNote, 
         onGenerateQuiz();
       },
     },
+    {
+      id: 'flashcards',
+      icon: Layers,
+      label: 'Generate Flashcards',
+      description: 'Study cards for memorization',
+      color: 'bg-amber-500 hover:bg-amber-600',
+      onClick: () => {
+        setActiveAction('flashcards');
+        onGenerateFlashcards();
+      },
+    },
   ];
 
   return (
@@ -57,7 +69,7 @@ export function AIToolbar({ onGenerateMindmap, onGenerateQuiz, onSummarizeNote, 
         <h3 className="text-sm font-semibold text-gray-700">AI Study Tools</h3>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {actions.map((action, index) => {
           const Icon = action.icon;
           const isActive = activeAction === action.id && isProcessing;

@@ -29,7 +29,8 @@ import { useAIActions } from '@/hooks/useAIActions';
 import { AIToolbar } from '@/components/ai/AIToolbar';
 import { MindmapViewer } from '@/components/ai/MindmapViewer';
 import { InteractiveQuiz } from '@/components/ai/InteractiveQuiz';
-import { GeneratedMindmap, Quiz } from '@/lib/ai/types';
+import { FlashcardViewer } from '@/components/ai/FlashcardViewer';
+import { GeneratedMindmap, Quiz, FlashcardSet } from '@/lib/ai/types';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { AIActionBubble, AIActionType } from '@/components/ai/AIActionBubble';
 import { AIResultPanel } from '@/components/ai/AIResultPanel';
@@ -72,32 +73,12 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
   const { selectedText, selectionPosition, clearSelection } = useTextSelection(contentAreaRef);
   const { isProcessing, currentSuggestion, processAction, clearSuggestion } = useAIActions();
 
-  // Debug logging for AI state changes
-  useEffect(() => {
-    console.log('🎯 [EnhancedNoteEditor] Selected text changed:', selectedText);
-    console.log('📍 [EnhancedNoteEditor] Selection position:', selectionPosition);
-    console.log('⚙️ [EnhancedNoteEditor] Is processing:', isProcessing);
-    console.log('👁️ [EnhancedNoteEditor] Bubble should be visible:', !!selectedText && !isProcessing);
-  }, [selectedText, selectionPosition, isProcessing]);
-
-  // Debug logging for contentAreaRef
-  useEffect(() => {
-    console.log('📦 [EnhancedNoteEditor] Content area ref:', contentAreaRef.current);
-    if (contentAreaRef.current) {
-      console.log('✅ [EnhancedNoteEditor] Content area ref is attached');
-      console.log('📐 [EnhancedNoteEditor] Content area dimensions:', {
-        width: contentAreaRef.current.offsetWidth,
-        height: contentAreaRef.current.offsetHeight,
-      });
-    } else {
-      console.log('❌ [EnhancedNoteEditor] Content area ref is NOT attached');
-    }
-  }, [contentAreaRef.current]);
-
   const [showMindmap, setShowMindmap] = useState(false);
   const [generatedMindmap, setGeneratedMindmap] = useState<GeneratedMindmap | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
+  const [showFlashcards, setShowFlashcards] = useState(false);
+  const [generatedFlashcards, setGeneratedFlashcards] = useState<FlashcardSet | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   // AI Result Panel
@@ -208,6 +189,35 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
           setShowAIPanel(false);
         }
         setIsGeneratingAI(false);
+      } else if (action === 'flashcards') {
+        // Generate flashcards
+        setIsGeneratingAI(true);
+
+        const response = await fetch('/api/ai/flashcards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'Selected Text',
+            content: selectedText,
+            count: 8,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to generate flashcards');
+        }
+
+        const data = await response.json();
+
+        if (data && data.flashcards && data.flashcards.length > 0) {
+          setGeneratedFlashcards(data);
+          setShowFlashcards(true);
+          setShowAIPanel(false);
+        } else {
+          throw new Error('No flashcards generated from the response');
+        }
+        setIsGeneratingAI(false);
       } else {
         // Other actions (summarize, explain)
         await processAction(action as any, selectedText);
@@ -215,18 +225,22 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
       }
     } catch (error) {
       console.error('AI action error:', error);
-      setAIPanelContent('An error occurred. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setAIPanelContent(`Error: ${errorMessage}`);
+      setShowAIPanel(true);
+      setIsGeneratingAI(false);
+    } finally {
+      clearSelection();
     }
-
-    clearSelection();
   };
 
   const getActionTitle = (action: AIActionType): string => {
-    const titles = {
+    const titles: Record<AIActionType, string> = {
       summarize: 'AI Summary',
       explain: 'AI Explanation',
       mindmap: 'Mind Map',
       quiz: 'Generated Quiz',
+      flashcards: 'Study Flashcards',
       improve: 'Improved Text',
     };
     return titles[action];
@@ -808,6 +822,28 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
             const data = await response.json();
             if (data.quiz) {
               setGeneratedQuiz(data.quiz);
+            }
+          }}
+        />
+      )}
+
+      {/* Flashcard Viewer */}
+      {showFlashcards && generatedFlashcards && (
+        <FlashcardViewer
+          flashcardSet={generatedFlashcards}
+          onClose={() => {
+            setShowFlashcards(false);
+            setGeneratedFlashcards(null);
+          }}
+          onRegenerate={async () => {
+            const response = await fetch('/api/ai/flashcards', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title, content, count: 8 }),
+            });
+            const data = await response.json();
+            if (data && data.flashcards && data.flashcards.length > 0) {
+              setGeneratedFlashcards(data);
             }
           }}
         />

@@ -16,7 +16,8 @@ import { AIPassiveHint } from '@/components/ai/AIPassiveHint';
 import { AIToolbar } from '@/components/ai/AIToolbar';
 import { MindmapViewer } from '@/components/ai/MindmapViewer';
 import { InteractiveQuiz } from '@/components/ai/InteractiveQuiz';
-import { GeneratedMindmap, Quiz } from '@/lib/ai/types';
+import { FlashcardViewer } from '@/components/ai/FlashcardViewer';
+import { GeneratedMindmap, Quiz, FlashcardSet } from '@/lib/ai/types';
 
 interface NoteEditorProps {
   note?: Note;
@@ -47,6 +48,8 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
   const [generatedMindmap, setGeneratedMindmap] = useState<GeneratedMindmap | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
+  const [showFlashcards, setShowFlashcards] = useState(false);
+  const [generatedFlashcards, setGeneratedFlashcards] = useState<FlashcardSet | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   // Handle image drops
@@ -276,6 +279,47 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
     await processAction('summarize', content);
   };
 
+  const handleGenerateFlashcards = async () => {
+    if (!title.trim() && !content.trim()) {
+      alert('Please add some content to generate flashcards');
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      console.log('Generating flashcards for:', { title, content: content.substring(0, 100) });
+      const response = await fetch('/api/ai/flashcards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title || 'Untitled Note',
+          content,
+          count: 8 // Generate 8 flashcards by default
+        }),
+      });
+
+      console.log('Flashcards response status:', response.status);
+      const data = await response.json();
+      console.log('Flashcards data received:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate flashcards');
+      }
+
+      if (data && data.flashcards && data.flashcards.length > 0) {
+        setGeneratedFlashcards(data);
+        setShowFlashcards(true);
+      } else {
+        throw new Error('No flashcards data in response');
+      }
+    } catch (error) {
+      console.error('Error generating flashcards:', error);
+      alert(`Failed to generate flashcards: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -432,6 +476,7 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
             onGenerateMindmap={handleGenerateMindmap}
             onGenerateQuiz={handleGenerateQuiz}
             onSummarizeNote={handleSummarizeNote}
+            onGenerateFlashcards={handleGenerateFlashcards}
             isProcessing={isGeneratingAI}
           />
 
@@ -510,6 +555,18 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
             setGeneratedQuiz(null);
           }}
           onRegenerate={handleGenerateQuiz}
+        />
+      )}
+
+      {/* Flashcard Viewer */}
+      {showFlashcards && generatedFlashcards && (
+        <FlashcardViewer
+          flashcardSet={generatedFlashcards}
+          onClose={() => {
+            setShowFlashcards(false);
+            setGeneratedFlashcards(null);
+          }}
+          onRegenerate={handleGenerateFlashcards}
         />
       )}
     </div>

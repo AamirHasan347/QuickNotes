@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { League_Spartan, Public_Sans } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const leagueSpartan = League_Spartan({
@@ -16,7 +17,8 @@ const publicSans = Public_Sans({
 
 export const metadata: Metadata = {
   title: "QuickNotes - AI-Powered Note-Taking for Students",
-  description: "A minimal, clean, and intelligent note-taking app for competitive exam preparation",
+  description:
+    "A minimal, clean, and intelligent note-taking app for competitive exam preparation",
 };
 
 export default function RootLayout({
@@ -25,7 +27,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${leagueSpartan.variable} ${publicSans.variable}`}>
+    <html
+      lang="en"
+      className={`${leagueSpartan.variable} ${publicSans.variable}`}
+    >
       <body className="bg-[--color-cream] text-[--color-text-black] antialiased">
         {children}
       </body>

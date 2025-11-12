@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Sparkles, FileText, Wand2, Globe, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export type AIAction = 'improve' | 'summarize' | 'expand' | 'translate';
+export type AIAction = 'improve' | 'summarize' | 'explain' | 'expand' | 'translate';
 
 interface FloatingAIToolbarProps {
   isVisible: boolean;

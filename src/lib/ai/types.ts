@@ -40,6 +40,18 @@ export interface Flashcard {
   explanation?: string; // Detailed explanation of the answer
 }
 
+export interface SimpleFlashcard {
+  id: string;
+  front: string;
+  back: string;
+}
+
+export interface FlashcardSet {
+  flashcards: SimpleFlashcard[];
+  totalCards: number;
+  title: string;
+}
+
 export interface Quiz {
   title: string;
   flashcards: Flashcard[];

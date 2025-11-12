@@ -179,8 +179,6 @@ export function NoteLinkInput({ value, onChange, onLinkInsert }: NoteLinkInputPr
   const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;
     const selectedText = target.value.substring(target.selectionStart, target.selectionEnd);
-    console.log('✏️ [NoteLinkInput] Text selected in textarea:', selectedText);
-    console.log('✏️ [NoteLinkInput] Selection range:', { start: target.selectionStart, end: target.selectionEnd });
   };
 
   const insertLink = (noteTitle: string) => {

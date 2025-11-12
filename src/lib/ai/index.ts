@@ -7,6 +7,7 @@ export { NoteSummarizerService } from './summarizer';
 export { MindmapGeneratorService } from './mindmap-generator';
 export { MindmapOrganizerService } from './mindmap-organizer';
 export { QuizMakerService } from './quiz-maker';
+export { FlashcardGeneratorService } from './flashcard-generator';
 export { StudyAssistantService } from './study-assistant';
 export { TranscriptionService } from './transcription';
 
@@ -18,6 +19,7 @@ let summarizerInstance: any = null;
 let mindmapInstance: any = null;
 let mindmapOrganizerInstance: any = null;
 let quizInstance: any = null;
+let flashcardInstance: any = null;
 let assistantInstance: any = null;
 let transcriptionInstance: any = null;
 
@@ -43,6 +45,14 @@ export function getQuizMaker() {
     quizInstance = new QuizMakerService();
   }
   return quizInstance;
+}
+
+export function getFlashcardGenerator() {
+  if (!flashcardInstance) {
+    const { FlashcardGeneratorService } = require('./flashcard-generator');
+    flashcardInstance = new FlashcardGeneratorService();
+  }
+  return flashcardInstance;
 }
 
 export function getStudyAssistant() {
