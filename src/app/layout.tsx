@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { League_Spartan, Public_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "./globals.css";
 
 const leagueSpartan = League_Spartan({
@@ -31,9 +32,11 @@ export default function RootLayout({
       lang="en"
       className={`${leagueSpartan.variable} ${publicSans.variable}`}
     >
-      <body className="bg-[--color-cream] text-[--color-text-black] antialiased">
-        {children}
-        <Analytics />
+      <body className="antialiased">
+        <ThemeProvider>
+          {children}
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );

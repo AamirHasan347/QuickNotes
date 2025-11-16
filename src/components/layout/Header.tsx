@@ -1,7 +1,7 @@
 'use client';
 
 import { Moon, Plus, Sun, Network, PanelLeftOpen } from 'lucide-react';
-import { useState } from 'react';
+import { useSettingsStore } from '@/lib/store/useSettingsStore';
 
 interface HeaderProps {
   onNewNote: () => void;
@@ -11,17 +11,23 @@ interface HeaderProps {
 }
 
 export function Header({ onNewNote, onOpenMindmap, onToggleFocus, isFocusMode }: HeaderProps) {
-  const [isDark, setIsDark] = useState(false);
+  const { settings, updateSettings } = useSettingsStore();
 
   const toggleTheme = () => {
-    setIsDark(!isDark);
-    document.documentElement.classList.toggle('dark');
+    const newTheme = settings.theme === 'dark' ? 'light' : 'dark';
+    updateSettings({ theme: newTheme });
   };
 
   return (
-    <header className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-6">
+    <header
+      className="h-16 flex items-center justify-between px-6"
+      style={{
+        backgroundColor: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-primary)'
+      }}
+    >
       <div className="flex-1">
-        <h2 className="text-lg font-semibold text-[--color-text-black]">
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
           All Notes
         </h2>
       </div>
@@ -30,7 +36,10 @@ export function Header({ onNewNote, onOpenMindmap, onToggleFocus, isFocusMode }:
         {isFocusMode && onToggleFocus && (
           <button
             onClick={onToggleFocus}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             aria-label="Exit focus mode"
             title="Show Sidebar (Cmd+\)"
           >
@@ -41,7 +50,10 @@ export function Header({ onNewNote, onOpenMindmap, onToggleFocus, isFocusMode }:
         {onOpenMindmap && (
           <button
             onClick={onOpenMindmap}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             aria-label="Open mindmap"
             title="Mindmap Editor"
           >
@@ -51,15 +63,22 @@ export function Header({ onNewNote, onOpenMindmap, onToggleFocus, isFocusMode }:
 
         <button
           onClick={toggleTheme}
-          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 rounded-lg transition-colors"
+          style={{ color: 'var(--text-secondary)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           aria-label="Toggle theme"
         >
-          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          {settings.theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
 
         <button
           onClick={onNewNote}
-          className="flex items-center gap-2 px-4 py-2 bg-[--color-primary-blue] text-[--color-text-black] rounded-lg font-medium hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity"
+          style={{
+            backgroundColor: '#63cdff',
+            color: '#121421'
+          }}
         >
           <Plus className="w-4 h-4" />
           <span>New Note</span>

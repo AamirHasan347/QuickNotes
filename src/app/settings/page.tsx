@@ -73,28 +73,29 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f8f8] p-8">
+    <div className="min-h-screen p-8" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Settings className="w-8 h-8 text-purple-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+            <Settings className="w-8 h-8 text-[#63cdff]" />
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Settings</h1>
           </div>
           <button
             onClick={() => router.push('/')}
-            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ backgroundColor: 'var(--bg-hover)' }}
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6" style={{ color: 'var(--text-primary)' }} />
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="max-w-6xl mx-auto rounded-2xl shadow-lg overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="flex">
           {/* Sidebar Tabs */}
-          <div className="w-64 bg-gray-50 border-r border-gray-200 p-4">
+          <div className="w-64 p-4" style={{ backgroundColor: 'var(--bg-tertiary)', borderRight: '1px solid var(--border-primary)' }}>
             <nav className="space-y-1">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -102,11 +103,11 @@ export default function SettingsPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                      activeTab === tab.id
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'hover:bg-gray-100 text-gray-700'
-                    }`}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all"
+                    style={{
+                      backgroundColor: activeTab === tab.id ? '#e4f6e5' : 'transparent',
+                      color: activeTab === tab.id ? '#121421' : 'var(--text-secondary)',
+                    }}
                   >
                     <Icon className="w-5 h-5" />
                     <span className="font-medium">{tab.label}</span>
@@ -116,17 +117,29 @@ export default function SettingsPage() {
             </nav>
 
             {/* Action Buttons */}
-            <div className="mt-6 pt-6 border-t border-gray-200 space-y-2">
+            <div className="mt-6 pt-6 space-y-2" style={{ borderTop: '1px solid var(--border-primary)' }}>
               <button
                 onClick={handleExport}
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors"
+                style={{
+                  color: 'var(--text-secondary)',
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <Download className="w-4 h-4" />
                 Export Settings
               </button>
               <button
                 onClick={handleImport}
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors"
+                style={{
+                  color: 'var(--text-secondary)',
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <Upload className="w-4 h-4" />
                 Import Settings
@@ -190,21 +203,22 @@ export default function SettingsPage() {
 function AppearanceSettings({ settings, updateSettings }: any) {
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Appearance</h2>
+      <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Appearance</h2>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Theme</label>
           <div className="flex gap-3">
             {['light', 'dark', 'auto'].map((theme) => (
               <button
                 key={theme}
                 onClick={() => updateSettings({ theme })}
-                className={`px-4 py-2 rounded-lg capitalize ${
-                  settings.theme === theme
-                    ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
-                    : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
-                }`}
+                className="px-4 py-2 rounded-lg capitalize border-2 transition-all"
+                style={{
+                  backgroundColor: settings.theme === theme ? '#e4f6e5' : 'var(--bg-tertiary)',
+                  color: settings.theme === theme ? '#121421' : 'var(--text-secondary)',
+                  borderColor: settings.theme === theme ? '#8ef292' : 'transparent',
+                }}
               >
                 {theme}
               </button>
@@ -213,17 +227,18 @@ function AppearanceSettings({ settings, updateSettings }: any) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Font Size</label>
+          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Font Size</label>
           <div className="flex gap-3">
             {['small', 'medium', 'large'].map((size) => (
               <button
                 key={size}
                 onClick={() => updateSettings({ fontSize: size })}
-                className={`px-4 py-2 rounded-lg capitalize ${
-                  settings.fontSize === size
-                    ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
-                    : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
-                }`}
+                className="px-4 py-2 rounded-lg capitalize border-2 transition-all"
+                style={{
+                  backgroundColor: settings.fontSize === size ? '#e4f6e5' : 'var(--bg-tertiary)',
+                  color: settings.fontSize === size ? '#121421' : 'var(--text-secondary)',
+                  borderColor: settings.fontSize === size ? '#8ef292' : 'transparent',
+                }}
               >
                 {size}
               </button>
@@ -232,11 +247,16 @@ function AppearanceSettings({ settings, updateSettings }: any) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Font Family</label>
+          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Font Family</label>
           <select
             value={settings.fontFamily}
             onChange={(e) => updateSettings({ fontFamily: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2"
+            style={{
+              backgroundColor: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-primary)',
+            }}
           >
             <option value="public-sans">Public Sans (Default)</option>
             <option value="inter">Inter</option>
@@ -252,13 +272,13 @@ function AppearanceSettings({ settings, updateSettings }: any) {
 function EditorSettings({ settings, updateSettings }: any) {
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Editor</h2>
+      <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Editor</h2>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-medium text-gray-900">Auto-save</h3>
-            <p className="text-sm text-gray-600">Automatically save changes as you type</p>
+            <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>Auto-save</h3>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Automatically save changes as you type</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input
@@ -267,13 +287,13 @@ function EditorSettings({ settings, updateSettings }: any) {
               onChange={(e) => updateSettings({ autoSave: e.target.checked })}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#63cdff]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#63cdff]"></div>
           </label>
         </div>
 
         {settings.autoSave && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
               Auto-save Delay (ms)
             </label>
             <input
@@ -288,15 +308,20 @@ function EditorSettings({ settings, updateSettings }: any) {
               min="500"
               max="5000"
               step="100"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#63cdff]"
+              style={{
+                backgroundColor: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-primary)',
+              }}
             />
           </div>
         )}
 
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-medium text-gray-900">Spell Check</h3>
-            <p className="text-sm text-gray-600">Enable spell checking in editor</p>
+            <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>Spell Check</h3>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Enable spell checking in editor</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input
@@ -305,22 +330,23 @@ function EditorSettings({ settings, updateSettings }: any) {
               onChange={(e) => updateSettings({ spellCheck: e.target.checked })}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#63cdff]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#63cdff]"></div>
           </label>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Line Height</label>
+          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Line Height</label>
           <div className="flex gap-3">
             {['compact', 'normal', 'relaxed'].map((height) => (
               <button
                 key={height}
                 onClick={() => updateSettings({ lineHeight: height })}
-                className={`px-4 py-2 rounded-lg capitalize ${
-                  settings.lineHeight === height
-                    ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
-                    : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
-                }`}
+                className="px-4 py-2 rounded-lg capitalize border-2 transition-all"
+                style={{
+                  backgroundColor: settings.lineHeight === height ? '#e4f6e5' : 'var(--bg-tertiary)',
+                  color: settings.lineHeight === height ? '#121421' : 'var(--text-secondary)',
+                  borderColor: settings.lineHeight === height ? '#8ef292' : 'transparent',
+                }}
               >
                 {height}
               </button>

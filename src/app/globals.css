@@ -13,8 +13,67 @@
   --color-text-grey: #efefef;
 }
 
+/* Light theme (default) */
+:root.light {
+  --bg-primary: #f8f8f8;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #fafafa;
+  --bg-hover: #f0f0f0;
+
+  --text-primary: #121421;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+
+  --border-primary: #e5e7eb;
+  --border-secondary: #d1d5db;
+
+  --accent-blue: #63cdff;
+  --accent-green: #8ef292;
+  --accent-green-light: #e4f6e5;
+}
+
+/* Dark theme */
+:root.dark {
+  --bg-primary: #121421;
+  --bg-secondary: #1a1d2e;
+  --bg-tertiary: #22253a;
+  --bg-hover: #2a2d42;
+
+  --text-primary: #f8f8f8;
+  --text-secondary: #9ca3af;
+  --text-tertiary: #6b7280;
+
+  --border-primary: #2a2d42;
+  --border-secondary: #373b52;
+
+  --accent-blue: #63cdff;
+  --accent-green: #8ef292;
+  --accent-green-light: #1a3a1e;
+}
+
+/* Default to light if no class is set */
+:root {
+  --bg-primary: #f8f8f8;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #fafafa;
+  --bg-hover: #f0f0f0;
+
+  --text-primary: #121421;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+
+  --border-primary: #e5e7eb;
+  --border-secondary: #d1d5db;
+
+  --accent-blue: #63cdff;
+  --accent-green: #8ef292;
+  --accent-green-light: #e4f6e5;
+}
+
 body {
-  font-family: var(--font-body);
+  font-family: var(--active-font-family, var(--font-body));
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 h1, h2, h3, h4, h5, h6 {

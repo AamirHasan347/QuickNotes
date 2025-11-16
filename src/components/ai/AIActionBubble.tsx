@@ -23,31 +23,36 @@ const ACTIONS = [
     id: "summarize" as AIActionType,
     icon: Sparkles,
     label: "Summarize",
-    color: "purple",
+    color: "#8b5cf6", // purple
+    bgHover: "rgba(139, 92, 246, 0.1)",
   },
   {
     id: "explain" as AIActionType,
     icon: Lightbulb,
     label: "Explain",
-    color: "yellow",
+    color: "#f59e0b", // amber
+    bgHover: "rgba(245, 158, 11, 0.1)",
   },
   {
     id: "mindmap" as AIActionType,
     icon: Network,
     label: "Mind Map",
-    color: "blue",
+    color: "#63cdff", // quicknotes blue
+    bgHover: "rgba(99, 205, 255, 0.1)",
   },
   {
     id: "quiz" as AIActionType,
     icon: Brain,
     label: "Create Quiz",
-    color: "green",
+    color: "#8ef292", // quicknotes green
+    bgHover: "rgba(142, 242, 146, 0.1)",
   },
   {
     id: "flashcards" as AIActionType,
     icon: Layers,
     label: "Flashcards",
-    color: "amber",
+    color: "#ec4899", // pink
+    bgHover: "rgba(236, 72, 153, 0.1)",
   },
 ];
 
@@ -79,8 +84,10 @@ export function AIActionBubble({
               left: position.x,
               top: position.y - 60,
               zIndex: 100,
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-primary)',
             }}
-            className="bg-white rounded-xl shadow-2xl border border-purple-200 p-2 flex gap-1"
+            className="rounded-xl shadow-2xl p-2 flex gap-1"
           >
             {ACTIONS.map((action, index) => {
               const Icon = action.icon;
@@ -94,15 +101,24 @@ export function AIActionBubble({
                     onAction(action.id);
                     onClose();
                   }}
-                  className={`group relative p-2.5 hover:bg-${action.color}-50 rounded-lg transition-all hover:scale-110`}
+                  className="group relative p-2.5 rounded-lg transition-all hover:scale-110"
+                  style={{ color: action.color }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = action.bgHover}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   title={action.label}
                 >
-                  <Icon className={`w-5 h-5 text-${action.color}-600`} />
+                  <Icon className="w-5 h-5" />
 
                   {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  <div
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none"
+                    style={{
+                      backgroundColor: 'var(--text-primary)',
+                      color: 'var(--bg-primary)'
+                    }}
+                  >
                     {action.label}
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent" style={{ borderTopColor: 'var(--text-primary)' }} />
                   </div>
                 </motion.button>
               );

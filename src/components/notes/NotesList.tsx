@@ -66,8 +66,8 @@ export function NotesList({ onNoteClick, onOpenMindmap }: NotesListProps) {
   if (!isClient) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-16rem)] text-center">
-        <FileText className="w-16 h-16 text-gray-300 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-600 mb-2">
+        <FileText className="w-16 h-16 mb-4" style={{ color: 'var(--text-tertiary)' }} />
+        <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
           Loading...
         </h3>
       </div>
@@ -92,11 +92,11 @@ export function NotesList({ onNoteClick, onOpenMindmap }: NotesListProps) {
   if (allNotes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-16rem)] text-center">
-        <FileText className="w-16 h-16 text-gray-300 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-600 mb-2">
+        <FileText className="w-16 h-16 mb-4" style={{ color: 'var(--text-tertiary)' }} />
+        <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
           No notes yet
         </h3>
-        <p className="text-gray-500">
+        <p style={{ color: 'var(--text-tertiary)' }}>
           Create your first note to get started
         </p>
       </div>
@@ -112,7 +112,7 @@ export function NotesList({ onNoteClick, onOpenMindmap }: NotesListProps) {
       <div className="space-y-6">
         {pinnedNotes.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-tertiary)' }}>
               Pinned
             </h2>
             <SortableContext items={pinnedNotes.map(n => n.id)} strategy={rectSortingStrategy}>
@@ -134,7 +134,7 @@ export function NotesList({ onNoteClick, onOpenMindmap }: NotesListProps) {
         {unpinnedNotes.length > 0 && (
           <div>
             {pinnedNotes.length > 0 && (
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-tertiary)' }}>
                 All Notes
               </h2>
             )}

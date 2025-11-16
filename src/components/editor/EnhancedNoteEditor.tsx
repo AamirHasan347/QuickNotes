@@ -26,6 +26,7 @@ import { VoiceRecorder } from '@/components/audio/VoiceRecorder';
 import { AudioPlayer } from '@/components/audio/AudioPlayer';
 import { useTextSelection } from '@/hooks/useTextSelection';
 import { useAIActions } from '@/hooks/useAIActions';
+import { useInfiniteCanvas } from '@/hooks/useInfiniteCanvas';
 import { AIToolbar } from '@/components/ai/AIToolbar';
 import { MindmapViewer } from '@/components/ai/MindmapViewer';
 import { InteractiveQuiz } from '@/components/ai/InteractiveQuiz';
@@ -34,7 +35,8 @@ import { GeneratedMindmap, Quiz, FlashcardSet } from '@/lib/ai/types';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { AIActionBubble, AIActionType } from '@/components/ai/AIActionBubble';
 import { AIResultPanel } from '@/components/ai/AIResultPanel';
-import { SketchCanvas } from './SketchCanvas';
+import InlineSketchCanvas from './InlineSketchCanvas';
+import QuickSketchToolbar from './QuickSketchToolbar';
 import { NoteLinkInput } from './NoteLinkParser';
 import { SmartBlocks } from './SmartBlocks';
 import { AttachmentDropzone } from './AttachmentDropzone';
@@ -64,7 +66,8 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [useBlockMode, setUseBlockMode] = useState(false);
-  const [showSketchCanvas, setShowSketchCanvas] = useState(false);
+  const [useSketchMode, setUseSketchMode] = useState(false);
+  const [currentSketchDrawing, setCurrentSketchDrawing] = useState<Drawing | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [inlineImages, setInlineImages] = useState<InlineImage[]>([]);
 
@@ -85,6 +88,47 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [aiPanelTitle, setAIPanelTitle] = useState('');
   const [aiPanelContent, setAIPanelContent] = useState('');
+
+  // Sketch Mode Hook (using infinite canvas)
+  const sketchHook = useInfiniteCanvas({
+    initialStrokes: currentSketchDrawing?.strokes || [],
+  });
+
+  // Auto-save drawing when strokes change
+  const lastStrokeCountRef = useRef(0);
+  useEffect(() => {
+    if (useSketchMode && sketchHook.strokeCount > 0 && sketchHook.strokeCount !== lastStrokeCountRef.current) {
+      lastStrokeCountRef.current = sketchHook.strokeCount;
+
+      const strokes = sketchHook.getStrokes();
+      const pngData = sketchHook.exportAsPNG();
+
+      if (!currentSketchDrawing) {
+        // Create new drawing
+        const newDrawing: Drawing = {
+          id: `drawing-${Date.now()}`,
+          data: pngData,
+          strokes: strokes,
+          canvasWidth: sketchHook.viewport.width,
+          canvasHeight: sketchHook.viewport.height,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        setCurrentSketchDrawing(newDrawing);
+        setDrawings([...drawings, newDrawing]);
+      } else {
+        // Update existing drawing
+        const updatedDrawing: Drawing = {
+          ...currentSketchDrawing,
+          data: pngData,
+          strokes: strokes,
+          updatedAt: new Date(),
+        };
+        setCurrentSketchDrawing(updatedDrawing);
+        setDrawings(drawings.map((d) => (d.id === updatedDrawing.id ? updatedDrawing : d)));
+      }
+    }
+  }, [sketchHook.strokeCount, useSketchMode, currentSketchDrawing, drawings, sketchHook]);
 
   // Load note data
   useEffect(() => {
@@ -426,7 +470,8 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className={`fixed inset-0 ${isFocusMode ? 'left-0' : 'left-0 md:left-64'} bg-white z-50 flex flex-col`}
+            className={`fixed inset-0 ${isFocusMode ? 'left-0' : 'left-0 md:left-64'} z-50 flex flex-col`}
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
@@ -445,12 +490,17 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.8, opacity: 0 }}
-                  className="bg-white rounded-2xl shadow-2xl p-12 border-4 border-dashed border-purple-500 pointer-events-none"
+                  className="rounded-2xl shadow-2xl p-12 border-4 border-dashed pointer-events-none"
+                  style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderColor: '#63cdff'
+                  }}
                 >
                   <div className="flex flex-col items-center gap-4">
-                    <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(99, 205, 255, 0.1)' }}>
                       <svg
-                        className="w-10 h-10 text-purple-600"
+                        className="w-10 h-10"
+                        style={{ color: '#63cdff' }}
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -464,10 +514,10 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
                       </svg>
                     </div>
                     <div className="text-center">
-                      <p className="text-xl font-semibold text-gray-900 mb-1">
+                      <p className="text-xl font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
                         Drop your files here
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                         Supports images, PDFs, and videos
                       </p>
                     </div>
@@ -477,19 +527,22 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
             )}
           </AnimatePresence>
           {/* Header */}
-          <div className="flex items-center justify-between px-4 md:px-8 py-4 md:py-6 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between px-4 md:px-8 py-4 md:py-6" style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderBottom: '1px solid var(--border-primary)'
+          }}>
             <div className="flex items-center gap-3">
-              <h2 className="text-base md:text-lg font-semibold text-gray-900">
+              <h2 className="text-base md:text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {note ? 'Edit Note' : 'New Note'}
               </h2>
               {/* Autosave indicator */}
               {isSaving ? (
-                <span className="hidden sm:flex items-center gap-2 text-sm text-blue-600">
-                  <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <span className="hidden sm:flex items-center gap-2 text-sm" style={{ color: '#63cdff' }}>
+                  <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#63cdff', borderTopColor: 'transparent' }} />
                   Saving...
                 </span>
               ) : lastSaved && (Date.now() - lastSaved.getTime() < 240000) ? (
-                <span className="hidden sm:inline text-sm text-green-600">
+                <span className="hidden sm:inline text-sm" style={{ color: '#8ef292' }}>
                   ✓ Autosaved
                 </span>
               ) : null}
@@ -501,62 +554,115 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleManualUpload}
-                className="p-2 hover:bg-green-100 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: '#8ef292' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(142, 242, 146, 0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 title="Upload Files"
               >
-                <Paperclip className="w-5 h-5 text-green-600" />
+                <Paperclip className="w-5 h-5" />
               </motion.button>
 
               {/* Sketch Mode Toggle */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setShowSketchCanvas(true)}
-                className="p-2 hover:bg-purple-100 rounded-lg transition-colors"
-                title="Sketch Mode"
+                onClick={() => {
+                  // When toggling sketch mode, disable block mode
+                  if (!useSketchMode) {
+                    setUseBlockMode(false);
+                  }
+                  setUseSketchMode(!useSketchMode);
+                }}
+                className="p-2 rounded-lg transition-colors"
+                style={{
+                  backgroundColor: useSketchMode ? 'rgba(142, 242, 146, 0.1)' : 'transparent',
+                  color: useSketchMode ? '#8ef292' : 'var(--text-secondary)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = useSketchMode ? 'rgba(142, 242, 146, 0.2)' : 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = useSketchMode ? 'rgba(142, 242, 146, 0.1)' : 'transparent'}
+                title="Toggle Sketch Mode"
               >
-                <Pencil className="w-5 h-5 text-purple-600" />
+                <Pencil className="w-5 h-5" />
               </motion.button>
 
               {/* Block Mode Toggle */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setUseBlockMode(!useBlockMode)}
-                className={`p-2 rounded-lg transition-colors ${
-                  useBlockMode ? 'bg-blue-100' : 'hover:bg-gray-100'
-                }`}
+                onClick={() => {
+                  // When toggling block mode, disable sketch mode
+                  if (!useBlockMode) {
+                    setUseSketchMode(false);
+                  }
+                  setUseBlockMode(!useBlockMode);
+                }}
+                className="p-2 rounded-lg transition-colors"
+                style={{
+                  backgroundColor: useBlockMode ? 'rgba(99, 205, 255, 0.1)' : 'transparent',
+                  color: useBlockMode ? '#63cdff' : 'var(--text-secondary)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = useBlockMode ? 'rgba(99, 205, 255, 0.2)' : 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = useBlockMode ? 'rgba(99, 205, 255, 0.1)' : 'transparent'}
                 title="Toggle Block Mode"
               >
-                <BlocksIcon
-                  className={`w-5 h-5 ${useBlockMode ? 'text-blue-600' : 'text-gray-600'}`}
-                />
+                <BlocksIcon className="w-5 h-5" />
               </motion.button>
 
               {note && <VersionHistory noteId={note.id} />}
 
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
+          {/* Sketch Mode Toolbar */}
+          {useSketchMode && (
+            <QuickSketchToolbar
+              currentTool={sketchHook.state.tool}
+              currentColor={sketchHook.state.color}
+              currentWidth={sketchHook.state.width}
+              onToolChange={sketchHook.setTool}
+              onColorChange={sketchHook.setColor}
+              onWidthChange={sketchHook.setWidth}
+              onClearAll={() => {
+                if (window.confirm('Are you sure you want to clear the canvas?')) {
+                  sketchHook.clearAll();
+                }
+              }}
+              onUndo={sketchHook.undo}
+              onRedo={sketchHook.redo}
+              canUndo={sketchHook.canUndo}
+              canRedo={sketchHook.canRedo}
+            />
+          )}
+
           {/* Content - No scroll on main container */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 flex">
               {/* Left side - Title and Content */}
               <div className="flex-1 flex flex-col px-4 md:px-8 py-6 md:py-8 overflow-hidden">
-                {/* Title Input */}
-                <input
-                  type="text"
-                  placeholder="Note title..."
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-2xl md:text-3xl font-bold text-gray-900 placeholder-gray-400 border-none outline-none bg-transparent mb-6"
-                />
+                {/* Title Input (hide in sketch mode) */}
+                {!useSketchMode && (
+                  <input
+                    type="text"
+                    placeholder="Note title..."
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full text-2xl md:text-3xl font-bold border-none outline-none bg-transparent mb-6"
+                    style={{
+                      color: 'var(--text-primary)',
+                      caretColor: 'var(--text-primary)'
+                    }}
+                  />
+                )}
 
                 {/* Content Area */}
                 <div
@@ -565,17 +671,36 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
                   style={{ userSelect: 'text' }}
                   data-selection-container="true"
                 >
-                  {/* Text content with wrapping around images */}
-                  <TextWithImageWrap images={inlineImages}>
-                    {useBlockMode ? (
-                      <SmartBlocks blocks={blocks} onChange={setBlocks} />
-                    ) : (
-                      <NoteLinkInput value={content} onChange={setContent} />
-                    )}
-                  </TextWithImageWrap>
+                  {useSketchMode ? (
+                    <InlineSketchCanvas
+                      currentDrawing={currentSketchDrawing}
+                      canvasHook={sketchHook}
+                      onUpdate={(drawing) => {
+                        setCurrentSketchDrawing(drawing);
+                        // Auto-add to drawings list if it's new
+                        if (!drawings.find((d) => d.id === drawing.id)) {
+                          setDrawings([...drawings, drawing]);
+                        } else {
+                          // Update existing drawing
+                          setDrawings(drawings.map((d) => (d.id === drawing.id ? drawing : d)));
+                        }
+                      }}
+                    />
+                  ) : (
+                    <>
+                      {/* Text content with wrapping around images */}
+                      <TextWithImageWrap images={inlineImages}>
+                        {useBlockMode ? (
+                          <SmartBlocks blocks={blocks} onChange={setBlocks} />
+                        ) : (
+                          <NoteLinkInput value={content} onChange={setContent} />
+                        )}
+                      </TextWithImageWrap>
+                    </>
+                  )}
 
-                  {/* Inline Draggable Images - Float on top */}
-                  {inlineImages.map((image) => (
+                  {/* Inline Draggable Images - Float on top (not in sketch mode) */}
+                  {!useSketchMode && inlineImages.map((image) => (
                     <DraggableImage
                       key={image.id}
                       id={image.id}
@@ -673,14 +798,33 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
                           <img
                             src={drawing.data}
                             alt="Drawing"
-                            className="w-full h-40 object-cover"
+                            className={`w-full h-40 object-cover ${
+                              drawing.strokes ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
+                            }`}
+                            onClick={() => {
+                              if (drawing.strokes) {
+                                setCurrentSketchDrawing(drawing);
+                                setUseBlockMode(false);
+                                setUseSketchMode(true);
+                              }
+                            }}
+                            title={drawing.strokes ? 'Click to edit' : 'Drawing'}
                           />
                           <button
-                            onClick={() => setDrawings(drawings.filter((d) => d.id !== drawing.id))}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDrawings(drawings.filter((d) => d.id !== drawing.id));
+                            }}
                             className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <X className="w-3 h-3" />
                           </button>
+                          {drawing.strokes && (
+                            <div className="absolute bottom-2 left-2 px-2 py-1 bg-purple-600 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                              <Pencil className="w-3 h-3" />
+                              Edit
+                            </div>
+                          )}
                         </motion.div>
                       ))}
                     </div>
@@ -691,12 +835,17 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
           </div>
 
           {/* Fixed Bottom Panel - Voice and Tags only */}
-          <div className={`fixed bottom-4 right-4 ${isFocusMode ? 'left-4' : 'left-4 md:left-[17rem]'} bg-white border border-gray-200 rounded-2xl shadow-xl overflow-y-auto max-h-48 z-[5]`}>
+          <div className={`fixed bottom-4 right-4 ${isFocusMode ? 'left-4' : 'left-4 md:left-[17rem]'} rounded-2xl shadow-xl overflow-y-auto max-h-48 z-[5]`}
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-primary)'
+            }}
+          >
             <div className="px-6 py-4 space-y-4">
               {/* Voice Recordings */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
                     Voice Notes
                   </h3>
                 </div>
@@ -724,7 +873,7 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
 
               {/* Tags */}
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
                   Tags
                 </h3>
                 <div className="flex items-center gap-2">
@@ -734,7 +883,13 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={handleAddTag}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
+                    className="flex-1 px-3 py-2 text-sm rounded-lg outline-none focus:border-[#63cdff] focus:ring-2 transition-all"
+                    style={{
+                      backgroundColor: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-primary)',
+                      color: 'var(--text-primary)',
+                      caretColor: 'var(--text-primary)'
+                    }}
                   />
                   {tags.length > 0 && (
                     <div className="flex flex-wrap gap-1">
@@ -743,7 +898,11 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
                           key={tag}
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          className="px-2 py-1 bg-green-50 text-gray-900 rounded-full text-xs font-medium flex items-center gap-1"
+                          className="px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"
+                          style={{
+                            backgroundColor: '#e4f6e5',
+                            color: '#121421'
+                          }}
                         >
                           {tag}
                           <button
@@ -784,13 +943,6 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
         onInsert={() => {
           setContent(content + '\n\n' + aiPanelContent);
         }}
-      />
-
-      {/* Sketch Canvas Modal */}
-      <SketchCanvas
-        isOpen={showSketchCanvas}
-        onClose={() => setShowSketchCanvas(false)}
-        onSave={(drawing) => setDrawings([...drawings, drawing])}
       />
 
       {/* Mindmap Viewer */}

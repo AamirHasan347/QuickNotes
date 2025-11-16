@@ -44,7 +44,8 @@ export function NoteLinkParser({ content, onLinkClick }: NoteLinkParserProps) {
         parts.push(
           <span
             key={match.index}
-            className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 cursor-pointer underline decoration-dotted underline-offset-2 transition-colors"
+            className="inline-flex items-center gap-1 cursor-pointer underline decoration-dotted underline-offset-2 transition-colors"
+            style={{ color: '#63cdff' }}
             onClick={() => onLinkClick(linkedNote.id)}
             onMouseEnter={(e) => {
               setHoveredLink(linkedNote.id);
@@ -62,7 +63,8 @@ export function NoteLinkParser({ content, onLinkClick }: NoteLinkParserProps) {
         parts.push(
           <span
             key={match.index}
-            className="text-gray-400 line-through"
+            className="line-through"
+            style={{ color: 'var(--text-tertiary)' }}
             title="Note not found"
           >
             {linkTitle}
@@ -102,16 +104,18 @@ export function NoteLinkParser({ content, onLinkClick }: NoteLinkParserProps) {
               left: linkPosition.x,
               top: linkPosition.y,
               zIndex: 1000,
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-primary)'
             }}
-            className="w-80 max-w-sm bg-white rounded-lg shadow-2xl border border-purple-200 p-4"
+            className="w-80 max-w-sm rounded-lg shadow-2xl p-4"
           >
             <div className="flex items-start gap-2 mb-2">
-              <ExternalLink className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
-              <h4 className="font-semibold text-gray-900 text-sm">
+              <ExternalLink className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#63cdff' }} />
+              <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
                 {hoveredNote.title}
               </h4>
             </div>
-            <p className="text-xs text-gray-600 line-clamp-3">
+            <p className="text-xs line-clamp-3" style={{ color: 'var(--text-secondary)' }}>
               {hoveredNote.content || 'Empty note'}
             </p>
             {hoveredNote.tags.length > 0 && (
@@ -119,14 +123,18 @@ export function NoteLinkParser({ content, onLinkClick }: NoteLinkParserProps) {
                 {hoveredNote.tags.slice(0, 3).map((tag) => (
                   <span
                     key={tag}
-                    className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs"
+                    className="px-2 py-0.5 rounded-full text-xs"
+                    style={{
+                      backgroundColor: 'rgba(99, 205, 255, 0.1)',
+                      color: '#63cdff'
+                    }}
                   >
                     {tag}
                   </span>
                 ))}
               </div>
             )}
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
               Click to open
             </p>
           </motion.div>
@@ -213,9 +221,13 @@ export function NoteLinkInput({ value, onChange, onLinkInsert }: NoteLinkInputPr
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onSelect={handleSelect}
-        className="w-full h-full text-gray-900 text-base leading-relaxed placeholder-gray-400 border-none outline-none resize-none bg-transparent focus:outline-none"
+        className="w-full h-full text-base leading-relaxed border-none outline-none resize-none bg-transparent focus:outline-none"
         placeholder="Start writing your note... Type [[ to link to another note"
-        style={{ userSelect: 'text' }}
+        style={{
+          userSelect: 'text',
+          color: 'var(--text-primary)',
+          caretColor: 'var(--text-primary)'
+        }}
       />
 
       {/* Autocomplete Suggestions */}
@@ -226,23 +238,27 @@ export function NoteLinkInput({ value, onChange, onLinkInsert }: NoteLinkInputPr
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 w-64 bg-white rounded-lg shadow-xl border border-purple-200 max-h-60 overflow-y-auto"
+            className="absolute z-50 w-64 rounded-lg shadow-xl max-h-60 overflow-y-auto"
             style={{
-              top: '100px', // Approximate position, could calculate dynamically
+              top: '100px',
               left: '20px',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-primary)'
             }}
           >
             <div className="p-2">
-              <p className="text-xs text-gray-500 px-2 py-1">Link to note:</p>
+              <p className="text-xs px-2 py-1" style={{ color: 'var(--text-tertiary)' }}>Link to note:</p>
               {filteredNotes.slice(0, 5).map((note) => (
                 <button
                   key={note.id}
                   onClick={() => insertLink(note.title)}
-                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-purple-50 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-lg transition-colors"
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <p className="text-sm font-medium text-gray-900">{note.title}</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{note.title}</p>
                   {note.tags.length > 0 && (
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                       {note.tags.join(', ')}
                     </p>
                   )}

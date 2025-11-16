@@ -25,10 +25,33 @@ export interface AudioRecording {
   createdAt: Date;
 }
 
+// Point in a drawing stroke
+export interface DrawingPoint {
+  x: number;
+  y: number;
+  pressure?: number; // Optional touch pressure
+}
+
+// Individual stroke in a drawing
+export interface DrawingStroke {
+  id: string;
+  tool: 'pen' | 'eraser' | 'highlighter' | 'line' | 'rectangle' | 'circle';
+  color: string;
+  width: number;
+  opacity: number;
+  points: DrawingPoint[];
+}
+
+// Drawing data (supports both legacy PNG and new vector format)
 export interface Drawing {
   id: string;
-  data: string; // Base64 encoded canvas image
+  data: string; // Base64 encoded PNG (used as thumbnail or legacy format)
   createdAt: Date;
+  // New vector format fields (optional for backward compatibility)
+  strokes?: DrawingStroke[]; // Vector stroke data for editing
+  canvasWidth?: number; // Canvas dimensions
+  canvasHeight?: number;
+  updatedAt?: Date; // Last edit timestamp
 }
 
 export interface InlineImage {

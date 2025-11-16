@@ -101,7 +101,7 @@ export default function Home() {
   }, [isFocusMode]);
 
   return (
-    <div className="flex h-screen bg-[--color-cream] relative">
+    <div className="flex h-screen relative" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Sidebar - hidden in focus mode */}
       <div className={`relative transition-all duration-500 ease-in-out ${isFocusMode ? 'w-0' : 'w-64'} overflow-hidden`}>
         <div className="w-64">
