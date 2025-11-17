@@ -5,12 +5,13 @@
 
 import { PromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { BaseAIService } from './base-service';
-import { NoteSummary, AIProvider } from './types';
+import { BaseAIService, AIServiceOptions } from './base-service';
+import { NoteSummary } from './types';
+import { extractDeepSeekJSON } from '@/lib/utils/json-extractor';
 
 export class NoteSummarizerService extends BaseAIService {
-  constructor(provider?: AIProvider) {
-    super(provider);
+  constructor(options?: AIServiceOptions) {
+    super(options);
   }
 
   /**
@@ -56,8 +57,8 @@ Return only valid JSON, no additional text.
         maxLength,
       });
 
-      // Parse the JSON response
-      const parsed = JSON.parse(result.trim());
+      // Parse the JSON response (handles DeepSeek R1 thinking tags)
+      const parsed = extractDeepSeekJSON(result);
 
       return {
         summary: parsed.summary,

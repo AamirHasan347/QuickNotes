@@ -74,11 +74,12 @@ export function Header({ onNewNote, onOpenMindmap, onToggleFocus, isFocusMode }:
 
         <button
           onClick={onNewNote}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-colors"
           style={{
-            backgroundColor: '#63cdff',
-            color: '#121421'
+            backgroundColor: 'var(--accent-primary)'
           }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-primary)'}
         >
           <Plus className="w-4 h-4" />
           <span>New Note</span>

@@ -90,7 +90,7 @@ function EditableNode({ data, id }: NodeProps) {
     <div
       onDoubleClick={handleDoubleClick}
       style={{
-        background: nodeData.background || '#8ef292',
+        background: nodeData.background || 'var(--accent-primary)',
         color: nodeData.color || '#121421',
         border: nodeData.border || '1px solid #121421',
         borderRadius: '8px',
@@ -198,7 +198,7 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
             } as Node<NodeData>;
           } else {
             // New React Flow format
-            const background = node.data?.background || '#8ef292';
+            const background = node.data?.background || 'var(--accent-primary)';
             const color = node.data?.color || '#121421';
             const border = node.data?.border || '1px solid #121421';
             const fontWeight = node.data?.fontWeight || 'normal';
@@ -244,7 +244,7 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
           type: 'editable',
           data: {
             label: initialTitle || 'Central Idea',
-            background: '#63cdff',
+            background: 'var(--accent-primary)',
             color: '#121421',
             border: '2px solid #121421',
             fontWeight: 'bold',
@@ -414,7 +414,7 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
       type: 'editable',
       data: {
         label: `Idea ${nodeIdCounter}`,
-        background: '#8ef292',
+        background: 'var(--accent-primary)',
         color: '#121421',
         border: '1px solid #121421',
         onLabelChange: handleNodeLabelChange,
@@ -578,7 +578,7 @@ export function MindmapEditor({ isOpen, onClose, initialTitle, existingMindmap }
           >
             <Controls />
             <MiniMap
-              nodeColor="#63cdff"
+              nodeColor="var(--accent-primary)"
               maskColor="rgba(0, 0, 0, 0.1)"
             />
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />

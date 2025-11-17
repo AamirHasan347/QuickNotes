@@ -5,12 +5,12 @@
 
 import { PromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { BaseAIService } from './base-service';
-import { SimpleFlashcard, FlashcardSet, AIProvider } from './types';
+import { BaseAIService, AIServiceOptions } from './base-service';
+import { SimpleFlashcard, FlashcardSet } from './types';
 
 export class FlashcardGeneratorService extends BaseAIService {
-  constructor(provider?: AIProvider) {
-    super(provider);
+  constructor(options?: AIServiceOptions) {
+    super(options);
   }
 
   /**
@@ -19,7 +19,7 @@ export class FlashcardGeneratorService extends BaseAIService {
   async generateFlashcards(
     title: string,
     content: string,
-    count: number = 8
+    count: number = 20
   ): Promise<FlashcardSet> {
     this.validateConfig();
 
@@ -35,7 +35,7 @@ Note Content: {content}
 
 **INSTRUCTIONS:**
 1. Extract the most important points, terms, concepts, definitions, and examples.
-2. Create {count} flashcards (or fewer if note is short).
+2. Create up to {count} flashcards based on the content length (generate fewer only if the note is very short).
 3. Each flashcard should have:
    - **Front:** A clear, short question, term, or prompt (max 100 characters)
    - **Back:** The correct answer, explanation, or summary (max 200 characters)
@@ -70,7 +70,7 @@ Return a valid JSON object with this structure:
 
 **CRITICAL:** For mathematical formulas, use plain text like shown above (a_c = v^2 / r), NOT LaTeX notation.
 
-Generate exactly {count} flashcards (or fewer if the note is too short).
+Generate up to {count} flashcards (the exact number depends on content length and depth).
 Return ONLY valid JSON, no additional text or markdown.
 `);
 
@@ -79,49 +79,66 @@ Return ONLY valid JSON, no additional text or markdown.
       const result = await chain.invoke({
         title: title || 'Untitled Note',
         content: content || '',
-        count: Math.min(count, 15), // Cap at 15 for quality
+        count: Math.min(count, 30), // Cap at 30 for quality
       });
 
-      // Parse the JSON response with better sanitization
-      let cleaned = result.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      // ==================== DEBUG LOGGING ====================
+      console.log('\n🃏 [FLASHCARD GENERATOR] Raw AI Response (BEFORE any cleaning):');
+      console.log('📏 Response length:', result?.length || 0);
+      console.log('📝 First 500 chars:', result?.substring(0, 500));
+      console.log('📝 Last 300 chars:', result?.substring(Math.max(0, (result?.length || 0) - 300)));
+      console.log('🔍 Has <think> tags:', /<think>/.test(result || ''));
+      console.log('🔍 Has markdown blocks:', /```/.test(result || ''));
+      console.log('🔍 Has LaTeX patterns:', /\\[(\[]/.test(result || ''));
+      // ========================================================
 
-      // Additional cleaning for common JSON issues
-      // Remove any trailing commas before closing brackets
-      cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1');
-
-      // Convert common LaTeX patterns to plain text before parsing
-      // This helps if the AI still uses LaTeX despite instructions
-      cleaned = cleaned.replace(/\\?\\\(/g, '('); // Remove \( or \\(
-      cleaned = cleaned.replace(/\\?\\\)/g, ')'); // Remove \) or \\)
-      cleaned = cleaned.replace(/\\?\\\[/g, '['); // Remove \[ or \\[
-      cleaned = cleaned.replace(/\\?\\\]/g, ']'); // Remove \] or \\]
-
-      // Convert LaTeX subscripts/superscripts to plain text
-      // e.g., a_{c} -> a_c, v^{2} -> v^2
-      cleaned = cleaned.replace(/_\{([^}]+)\}/g, '_$1');
-      cleaned = cleaned.replace(/\^\{([^}]+)\}/g, '^$1');
-
-      cleaned = cleaned.replace(/\\{2,}/g, ''); // Remove multiple backslashes
+      // Import the robust JSON extractor
+      const { extractDeepSeekJSON } = await import('@/lib/utils/json-extractor');
 
       let parsed;
-      try {
-        parsed = JSON.parse(cleaned);
-      } catch (parseError) {
-        // If parsing fails, log the problematic JSON for debugging
-        console.error('Failed to parse flashcard JSON:', cleaned.substring(0, 500));
-        console.error('Parse error:', parseError);
 
-        // Try to extract JSON using regex as a fallback
-        const jsonMatch = cleaned.match(/\{[\s\S]*"flashcards"[\s\S]*\}/);
-        if (jsonMatch) {
-          // Try parsing the extracted JSON
-          try {
-            parsed = JSON.parse(jsonMatch[0]);
-          } catch (secondError) {
-            throw new Error('Failed to parse AI response. The model returned malformed JSON.');
-          }
-        } else {
-          throw new Error('Failed to extract valid JSON from AI response.');
+      // STRATEGY 1: Try parsing the RAW response first (handles <think> tags automatically)
+      try {
+        console.log('🔄 [FLASHCARD GENERATOR] Attempting to parse RAW response...');
+        parsed = extractDeepSeekJSON(result);
+        console.log('✅ [FLASHCARD GENERATOR] Successfully parsed RAW response!');
+        console.log('📊 Flashcards found:', parsed.flashcards?.length || 0);
+      } catch (rawError) {
+        console.warn('⚠️  [FLASHCARD GENERATOR] Raw parsing failed, trying with cleaning...');
+        console.warn('Raw parse error:', rawError);
+
+        // STRATEGY 2: Try with cleaning if raw parsing fails
+        try {
+          let cleaned = result.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '');
+
+          // Additional cleaning for common JSON issues
+          cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
+
+          // Convert common LaTeX patterns to plain text
+          cleaned = cleaned.replace(/\\?\\\(/g, '(');
+          cleaned = cleaned.replace(/\\?\\\)/g, ')');
+          cleaned = cleaned.replace(/\\?\\\[/g, '[');
+          cleaned = cleaned.replace(/\\?\\\]/g, ']');
+
+          // Convert LaTeX subscripts/superscripts: a_{c} -> a_c, v^{2} -> v^2
+          cleaned = cleaned.replace(/_\{([^}]+)\}/g, '_$1');
+          cleaned = cleaned.replace(/\^\{([^}]+)\}/g, '^$1');
+
+          cleaned = cleaned.replace(/\\{2,}/g, ''); // Remove multiple backslashes
+
+          console.log('🔄 [FLASHCARD GENERATOR] Attempting to parse CLEANED response...');
+          console.log('📝 Cleaned first 500 chars:', cleaned.substring(0, 500));
+
+          parsed = extractDeepSeekJSON(cleaned);
+          console.log('✅ [FLASHCARD GENERATOR] Successfully parsed CLEANED response!');
+          console.log('📊 Flashcards found:', parsed.flashcards?.length || 0);
+        } catch (cleanedError) {
+          // Both strategies failed - provide detailed debugging info
+          console.error('❌ [FLASHCARD GENERATOR] Both parsing strategies failed!');
+          console.error('📛 Raw response (first 500):', result?.substring(0, 500));
+          console.error('📛 Raw response (last 300):', result?.substring(Math.max(0, (result?.length || 0) - 300)));
+          console.error('❌ Cleaned parse error:', cleanedError);
+          throw new Error('AI returned malformed flashcard data. The response could not be parsed as valid JSON.');
         }
       }
 
@@ -150,7 +167,7 @@ Return ONLY valid JSON, no additional text or markdown.
    */
   async generateFromMultipleNotes(
     notes: Array<{ title: string; content: string }>,
-    count: number = 10
+    count: number = 20
   ): Promise<FlashcardSet> {
     this.validateConfig();
 

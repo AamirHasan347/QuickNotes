@@ -152,8 +152,8 @@ export function SearchModal({ isOpen, onClose, onSelectNote }: SearchModalProps)
                             key={tag}
                             className="px-2 py-0.5 text-xs rounded"
                             style={{
-                              backgroundColor: '#e4f6e5',
-                              color: '#121421'
+                              backgroundColor: 'var(--accent-light)',
+                              color: 'var(--accent-primary)'
                             }}
                           >
                             {tag}

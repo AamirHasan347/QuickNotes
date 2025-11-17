@@ -89,8 +89,8 @@ const QuickSketchToolbar: React.FC<QuickSketchToolbarProps> = ({
             onClick={() => onToolChange(tool.value)}
             className="p-2 rounded-lg transition-colors"
             style={{
-              backgroundColor: currentTool === tool.value ? 'rgba(99, 205, 255, 0.1)' : 'transparent',
-              color: currentTool === tool.value ? '#63cdff' : 'var(--text-secondary)'
+              backgroundColor: currentTool === tool.value ? 'var(--accent-light)' : 'transparent',
+              color: currentTool === tool.value ? 'var(--accent-primary)' : 'var(--text-secondary)'
             }}
             onMouseEnter={(e) => {
               if (currentTool !== tool.value) e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
@@ -138,8 +138,8 @@ const QuickSketchToolbar: React.FC<QuickSketchToolbarProps> = ({
             onClick={() => onWidthChange(width.value)}
             className="p-2 rounded-lg transition-colors flex items-center justify-center"
             style={{
-              backgroundColor: currentWidth === width.value ? 'rgba(99, 205, 255, 0.1)' : 'transparent',
-              color: currentWidth === width.value ? '#63cdff' : 'var(--text-secondary)'
+              backgroundColor: currentWidth === width.value ? 'var(--accent-light)' : 'transparent',
+              color: currentWidth === width.value ? 'var(--accent-primary)' : 'var(--text-secondary)'
             }}
             onMouseEnter={(e) => {
               if (currentWidth !== width.value) e.currentTarget.style.backgroundColor = 'var(--bg-hover)';

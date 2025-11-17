@@ -80,8 +80,8 @@ export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandle
             <button
               onClick={handleOpenMindmap}
               className="p-1.5 rounded transition-colors"
-              style={{ color: '#63cdff' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(99, 205, 255, 0.1)'}
+              style={{ color: 'var(--accent-primary)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-light)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               aria-label="Open in mindmap editor"
               title="Open in mindmap editor"
@@ -92,7 +92,7 @@ export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandle
           <button
             onClick={handleTogglePin}
             className="p-1.5 rounded transition-colors"
-            style={{ color: note.isPinned ? '#63cdff' : 'var(--text-secondary)' }}
+            style={{ color: note.isPinned ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             aria-label="Pin note"
@@ -150,7 +150,7 @@ export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandle
 
       <div className="flex items-center gap-3">
         {hasLinks && (
-          <div className="flex items-center gap-1 text-xs" style={{ color: '#63cdff' }}>
+          <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--accent-primary)' }}>
             <LinkIcon className="w-3 h-3" />
             <span>{links.length} link{links.length > 1 ? 's' : ''}</span>
           </div>
@@ -171,8 +171,8 @@ export function NoteCard({ note, onClick, onLinkClick, onOpenMindmap, dragHandle
               key={tag}
               className="px-2 py-0.5 text-xs rounded"
               style={{
-                backgroundColor: '#e4f6e5',
-                color: '#121421'
+                backgroundColor: 'var(--accent-light)',
+                color: 'var(--accent-primary)'
               }}
             >
               {tag}

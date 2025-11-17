@@ -84,7 +84,7 @@ export function MindmapViewer({ mindmap, onClose, noteId }: MindmapViewerProps) 
         position: node.position,
         data: {
           label: String(node.data.label),
-          background: node.style?.background || '#8ef292',
+          background: node.style?.background || 'var(--accent-primary)',
           color: node.style?.color || '#ffffff',
           border: node.style?.border || 'none',
           fontWeight: node.style?.fontWeight || 'normal',

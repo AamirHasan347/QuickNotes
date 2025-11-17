@@ -5,13 +5,13 @@
 
 import { PromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { BaseAIService } from './base-service';
-import { GeneratedMindmap, MindmapNode, MindmapEdge, AIProvider } from './types';
-import { parseAIJson } from './utils';
+import { BaseAIService, AIServiceOptions } from './base-service';
+import { GeneratedMindmap, MindmapNode, MindmapEdge } from './types';
+import { extractDeepSeekJSON } from '@/lib/utils/json-extractor';
 
 export class MindmapGeneratorService extends BaseAIService {
-  constructor(provider?: AIProvider) {
-    super(provider);
+  constructor(options?: AIServiceOptions) {
+    super(options);
   }
 
   /**
@@ -66,11 +66,39 @@ JSON response:
         content: content || '',
       });
 
-      // Parse JSON response (handles markdown code blocks)
-      const parsed = parseAIJson(result);
+      // Debug logging
+      console.log('\n🗺️  [MINDMAP GENERATOR] Raw AI Response:');
+      console.log('📏 Response length:', result?.length || 0);
+      console.log('📝 First 500 chars:', result?.substring(0, 500));
+      console.log('📝 Last 200 chars:', result?.substring(Math.max(0, (result?.length || 0) - 200)));
+      console.log('🔍 Has <think> tags:', /<think>/.test(result || ''));
+
+      // Parse JSON response (handles DeepSeek thinking tags)
+      let parsed;
+      try {
+        parsed = extractDeepSeekJSON(result);
+        console.log('✅ [MINDMAP GENERATOR] JSON parsed successfully');
+        console.log('📊 Parsed structure:', {
+          hasTitle: !!parsed.title,
+          nodesCount: parsed.nodes?.length || 0,
+          edgesCount: parsed.edges?.length || 0
+        });
+      } catch (error) {
+        console.error('❌ [MINDMAP GENERATOR] JSON parsing failed:', error);
+        console.error('📛 Raw response that failed:', result);
+        throw new Error('AI returned malformed mindmap data. Please try again with different content.');
+      }
+
+      // Validate structure
+      if (!parsed.nodes || !Array.isArray(parsed.nodes)) {
+        console.error('❌ [MINDMAP GENERATOR] Invalid structure - no nodes array');
+        throw new Error('AI did not return a valid mindmap structure. Please try again.');
+      }
 
       // Calculate positions for nodes (radial layout)
       const nodesWithPositions = this.calculateNodePositions(parsed.nodes);
+
+      console.log('✅ [MINDMAP GENERATOR] Mindmap generated successfully\n');
 
       return {
         title: parsed.title || title,

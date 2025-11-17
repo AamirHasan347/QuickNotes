@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotesStore } from '@/lib/store/useNotesStore';
+import { useSettingsStore } from '@/lib/store/useSettingsStore';
 import {
   X,
   Pencil,
@@ -11,6 +12,8 @@ import {
   FileText,
   Image as ImageIcon,
   Video,
+  Save,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   Note,
@@ -52,6 +55,7 @@ interface EnhancedNoteEditorProps {
 
 export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false }: EnhancedNoteEditorProps) {
   const { updateNote } = useNotesStore();
+  const { settings } = useSettingsStore();
 
   // Basic note data
   const [title, setTitle] = useState('');
@@ -155,6 +159,7 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
         setAttachments([]);
         setBlocks([]);
         setUseBlockMode(false);
+        setUseSketchMode(false);
         setInlineImages([]);
       }
       setTagInput('');
@@ -176,14 +181,17 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
     inlineImages,
   };
 
-  const { isSaving, lastSaved } = useAutoSave(
+  const { isSaving, lastSaved, hasUnsavedChanges, manualSave } = useAutoSave(
     noteData,
     (data) => {
       if (note && (title.trim() || content.trim())) {
         updateNote(note.id, data);
       }
     },
-    1000
+    {
+      delay: settings.autoSaveDelay * 1000, // Convert seconds to milliseconds
+      enabled: settings.autoSave
+    }
   );
 
   // AI Actions
@@ -204,6 +212,10 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
           body: JSON.stringify({
             title: 'Selected Text',
             content: selectedText,
+            aiSettings: {
+              aiModel: settings.aiModel,
+              aiTemperature: settings.aiTemperature,
+            },
           }),
         });
 
@@ -223,6 +235,11 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
           body: JSON.stringify({
             title: 'Selected Text Quiz',
             content: selectedText,
+            count: 15,
+            aiSettings: {
+              aiModel: settings.aiModel,
+              aiTemperature: settings.aiTemperature,
+            },
           }),
         });
 
@@ -243,7 +260,11 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
           body: JSON.stringify({
             title: 'Selected Text',
             content: selectedText,
-            count: 8,
+            count: 20,
+            aiSettings: {
+              aiModel: settings.aiModel,
+              aiTemperature: settings.aiTemperature,
+            },
           }),
         });
 
@@ -459,6 +480,37 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
     setAttachments(attachments.filter((a) => a.id !== id));
   };
 
+  // Guide lines background style generator
+  const getGuideLineStyle = (): React.CSSProperties => {
+    const isDark = settings.theme === 'dark';
+    const lineColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+    const dotColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+    switch (settings.guideLines) {
+      case 'dots':
+        return {
+          backgroundImage: `radial-gradient(circle, ${dotColor} 1px, transparent 1px)`,
+          backgroundSize: '20px 20px',
+        };
+      case 'single-line':
+        return {
+          backgroundImage: `linear-gradient(${lineColor} 1px, transparent 1px)`,
+          backgroundSize: '100% 30px',
+        };
+      case 'grid':
+        return {
+          backgroundImage: `
+            linear-gradient(${lineColor} 1px, transparent 1px),
+            linear-gradient(90deg, ${lineColor} 1px, transparent 1px)
+          `,
+          backgroundSize: '30px 30px',
+        };
+      case 'none':
+      default:
+        return {};
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -535,20 +587,58 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
               <h2 className="text-base md:text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {note ? 'Edit Note' : 'New Note'}
               </h2>
-              {/* Autosave indicator */}
-              {isSaving ? (
-                <span className="hidden sm:flex items-center gap-2 text-sm" style={{ color: '#63cdff' }}>
-                  <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#63cdff', borderTopColor: 'transparent' }} />
-                  Saving...
-                </span>
-              ) : lastSaved && (Date.now() - lastSaved.getTime() < 240000) ? (
-                <span className="hidden sm:inline text-sm" style={{ color: '#8ef292' }}>
-                  ✓ Autosaved
-                </span>
-              ) : null}
+              {/* Save status indicator */}
+              {note && (
+                <div className="flex items-center gap-2 text-sm">
+                  {settings.autoSave ? (
+                    isSaving ? (
+                      <span className="hidden sm:flex items-center gap-2" style={{ color: '#63cdff' }}>
+                        <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#63cdff', borderTopColor: 'transparent' }} />
+                        Saving...
+                      </span>
+                    ) : lastSaved ? (
+                      <span className="hidden sm:flex items-center gap-1.5" style={{ color: '#8ef292' }}>
+                        <CheckCircle2 className="w-4 h-4" />
+                        Auto-saved
+                      </span>
+                    ) : hasUnsavedChanges ? (
+                      <span className="hidden sm:inline text-gray-500">
+                        Auto-saving in {settings.autoSaveDelay}s...
+                      </span>
+                    ) : null
+                  ) : hasUnsavedChanges ? (
+                    <span className="hidden sm:inline text-orange-600 font-medium">
+                      ● Unsaved changes
+                    </span>
+                  ) : lastSaved ? (
+                    <span className="hidden sm:flex items-center gap-1.5" style={{ color: '#8ef292' }}>
+                      <CheckCircle2 className="w-4 h-4" />
+                      Saved
+                    </span>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Manual Save Button - Only show when auto-save is off */}
+              {note && !settings.autoSave && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={manualSave}
+                  disabled={!hasUnsavedChanges}
+                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: hasUnsavedChanges ? '#63cdff' : 'var(--bg-tertiary)',
+                    color: hasUnsavedChanges ? '#121421' : 'var(--text-secondary)',
+                  }}
+                  title={hasUnsavedChanges ? 'Save changes' : 'No changes to save'}
+                >
+                  <Save className="w-4 h-4" />
+                  <span className="hidden md:inline">Save</span>
+                </motion.button>
+              )}
               {/* Upload Files Button */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -668,13 +758,15 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
                 <div
                   ref={contentAreaRef}
                   className="flex-1 overflow-y-auto relative"
-                  style={{ userSelect: 'text' }}
+                  style={{ userSelect: 'text', ...getGuideLineStyle() }}
                   data-selection-container="true"
                 >
                   {useSketchMode ? (
                     <InlineSketchCanvas
                       currentDrawing={currentSketchDrawing}
                       canvasHook={sketchHook}
+                      guideLines={settings.guideLines}
+                      theme={settings.theme}
                       onUpdate={(drawing) => {
                         setCurrentSketchDrawing(drawing);
                         // Auto-add to drawings list if it's new
@@ -969,7 +1061,15 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
             const response = await fetch('/api/ai/quiz', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ title, content }),
+              body: JSON.stringify({
+                title,
+                content,
+                count: 15,
+                aiSettings: {
+                  aiModel: settings.aiModel,
+                  aiTemperature: settings.aiTemperature,
+                },
+              }),
             });
             const data = await response.json();
             if (data.quiz) {
@@ -991,7 +1091,15 @@ export function EnhancedNoteEditor({ note, isOpen, onClose, isFocusMode = false 
             const response = await fetch('/api/ai/flashcards', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ title, content, count: 8 }),
+              body: JSON.stringify({
+                title,
+                content,
+                count: 20,
+                aiSettings: {
+                  aiModel: settings.aiModel,
+                  aiTemperature: settings.aiTemperature,
+                },
+              }),
             });
             const data = await response.json();
             if (data && data.flashcards && data.flashcards.length > 0) {

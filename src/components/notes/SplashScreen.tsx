@@ -33,55 +33,59 @@ export function SplashScreen({ onNoteClick, onCreateWorkspace }: SplashScreenPro
       {/* Welcome Header */}
       <div className="mb-8">
         <div className="flex items-center justify-center mb-4">
-          <Sparkles className="w-12 h-12 text-blue-500" />
+          <Sparkles className="w-12 h-12" style={{ color: 'var(--accent-primary)' }} />
         </div>
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">
+        <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
           Welcome to QuickNotes
         </h1>
-        <p className="text-lg text-gray-600">
+        <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>
           Your intelligent workspace for learning and note-taking
         </p>
       </div>
 
       {/* Stats */}
       <div className="flex gap-6 mb-8">
-        <div className="bg-blue-50 rounded-lg p-4 min-w-[120px]">
-          <div className="text-3xl font-bold text-blue-600">{totalWorkspaces}</div>
-          <div className="text-sm text-gray-600">Workspaces</div>
+        <div className="rounded-lg p-4 min-w-[120px]" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
+          <div className="text-3xl font-bold" style={{ color: 'var(--accent-primary)' }}>{totalWorkspaces}</div>
+          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Workspaces</div>
         </div>
-        <div className="bg-green-50 rounded-lg p-4 min-w-[120px]">
-          <div className="text-3xl font-bold text-green-600">{totalFolders}</div>
-          <div className="text-sm text-gray-600">Folders</div>
+        <div className="rounded-lg p-4 min-w-[120px]" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
+          <div className="text-3xl font-bold" style={{ color: 'var(--accent-primary)' }}>{totalFolders}</div>
+          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Folders</div>
         </div>
-        <div className="bg-purple-50 rounded-lg p-4 min-w-[120px]">
-          <div className="text-3xl font-bold text-purple-600">{totalNotes}</div>
-          <div className="text-sm text-gray-600">Notes</div>
+        <div className="rounded-lg p-4 min-w-[120px]" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
+          <div className="text-3xl font-bold" style={{ color: 'var(--accent-primary)' }}>{totalNotes}</div>
+          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Notes</div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="mb-8">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4">
+        <h3 className="text-sm font-semibold uppercase mb-4" style={{ color: 'var(--text-tertiary)' }}>
           Quick Actions
         </h3>
         <div className="flex gap-4">
           <button
             onClick={onCreateWorkspace}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg transition-colors shadow-sm text-white"
+            style={{ backgroundColor: 'var(--accent-primary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-primary)'}
           >
             <FolderPlus className="w-5 h-5" />
             Create Workspace
           </button>
           <button
             disabled
-            className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg cursor-not-allowed"
+            style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}
             title="Select a workspace first"
           >
             <FileText className="w-5 h-5" />
             Create Note
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
           Select a workspace or folder from the sidebar to create notes
         </p>
       </div>
@@ -89,22 +93,24 @@ export function SplashScreen({ onNoteClick, onCreateWorkspace }: SplashScreenPro
       {/* Recent Notes */}
       {recentNotes.length > 0 && (
         <div className="w-full max-w-2xl">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-semibold uppercase mb-3 flex items-center gap-2" style={{ color: 'var(--text-tertiary)' }}>
             <Clock className="w-4 h-4" />
             Recent Notes
           </h3>
-          <div className="bg-white rounded-lg border border-gray-200 divide-y">
+          <div className="rounded-lg divide-y" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
             {recentNotes.map((note) => (
               <button
                 key={note.id}
                 onClick={() => onNoteClick?.(note)}
-                className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center justify-between group"
+                className="w-full text-left px-4 py-3 transition-colors flex items-center justify-between group"
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-800 truncate group-hover:text-blue-600">
+                  <div className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                     {note.title || 'Untitled'}
                   </div>
-                  <div className="text-sm text-gray-500 truncate">
+                  <div className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>
                     {new Date(note.updatedAt).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -113,7 +119,7 @@ export function SplashScreen({ onNoteClick, onCreateWorkspace }: SplashScreenPro
                     })}
                   </div>
                 </div>
-                <FileText className="w-4 h-4 text-gray-400 group-hover:text-blue-600 ml-2" />
+                <FileText className="w-4 h-4 ml-2" style={{ color: 'var(--text-tertiary)' }} />
               </button>
             ))}
           </div>
@@ -121,16 +127,16 @@ export function SplashScreen({ onNoteClick, onCreateWorkspace }: SplashScreenPro
       )}
 
       {/* Keyboard Shortcuts */}
-      <div className="mt-8 text-xs text-gray-400">
+      <div className="mt-8 text-xs" style={{ color: 'var(--text-tertiary)' }}>
         <div className="flex items-center gap-4">
           <span>
-            <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300">
+            <kbd className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)' }}>
               Ctrl+K
             </kbd>{' '}
             Search
           </span>
           <span>
-            <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300">
+            <kbd className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)' }}>
               Ctrl+N
             </kbd>{' '}
             New Note

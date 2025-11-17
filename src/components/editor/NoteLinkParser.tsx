@@ -4,6 +4,7 @@ import { useRef, useState, useEffect, ReactElement } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { useNotesStore } from '@/lib/store/useNotesStore';
+import { useSettingsStore } from '@/lib/store/useSettingsStore';
 
 interface NoteLinkParserProps {
   content: string;
@@ -45,7 +46,7 @@ export function NoteLinkParser({ content, onLinkClick }: NoteLinkParserProps) {
           <span
             key={match.index}
             className="inline-flex items-center gap-1 cursor-pointer underline decoration-dotted underline-offset-2 transition-colors"
-            style={{ color: '#63cdff' }}
+            style={{ color: 'var(--accent-primary)' }}
             onClick={() => onLinkClick(linkedNote.id)}
             onMouseEnter={(e) => {
               setHoveredLink(linkedNote.id);
@@ -110,7 +111,7 @@ export function NoteLinkParser({ content, onLinkClick }: NoteLinkParserProps) {
             className="w-80 max-w-sm rounded-lg shadow-2xl p-4"
           >
             <div className="flex items-start gap-2 mb-2">
-              <ExternalLink className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#63cdff' }} />
+              <ExternalLink className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-primary)' }} />
               <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
                 {hoveredNote.title}
               </h4>
@@ -125,8 +126,8 @@ export function NoteLinkParser({ content, onLinkClick }: NoteLinkParserProps) {
                     key={tag}
                     className="px-2 py-0.5 rounded-full text-xs"
                     style={{
-                      backgroundColor: 'rgba(99, 205, 255, 0.1)',
-                      color: '#63cdff'
+                      backgroundColor: 'var(--accent-light)',
+                      color: 'var(--accent-primary)'
                     }}
                   >
                     {tag}
@@ -152,6 +153,7 @@ interface NoteLinkInputProps {
 
 export function NoteLinkInput({ value, onChange, onLinkInsert }: NoteLinkInputProps) {
   const { notes } = useNotesStore();
+  const { settings } = useSettingsStore();
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [cursorPosition, setCursorPosition] = useState(0);
@@ -221,6 +223,7 @@ export function NoteLinkInput({ value, onChange, onLinkInsert }: NoteLinkInputPr
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onSelect={handleSelect}
+        spellCheck={settings.spellCheck}
         className="w-full h-full text-base leading-relaxed border-none outline-none resize-none bg-transparent focus:outline-none"
         placeholder="Start writing your note... Type [[ to link to another note"
         style={{

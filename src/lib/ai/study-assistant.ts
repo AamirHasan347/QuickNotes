@@ -7,8 +7,9 @@
 import { PromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { RunnableSequence } from '@langchain/core/runnables';
-import { BaseAIService } from './base-service';
-import { ChatMessage, AIProvider } from './types';
+import { BaseAIService, AIServiceOptions } from './base-service';
+import { ChatMessage } from './types';
+import { extractDeepSeekJSON, stripThinkingTags } from '@/lib/utils/json-extractor';
 
 interface NoteData {
   id: string;
@@ -20,8 +21,8 @@ interface NoteData {
 export class StudyAssistantService extends BaseAIService {
   private notes: NoteData[] = [];
 
-  constructor(provider?: AIProvider) {
-    super(provider);
+  constructor(options?: AIServiceOptions) {
+    super(options);
   }
 
   /**
@@ -62,29 +63,48 @@ export class StudyAssistantService extends BaseAIService {
     question: string,
     conversationHistory: ChatMessage[] = []
   ): Promise<string> {
+    console.log('\n🤖 [STUDY ASSISTANT] ask() called');
+    console.log('📝 [STUDY ASSISTANT] Question:', question?.substring(0, 100));
+    console.log('📚 [STUDY ASSISTANT] History length:', conversationHistory?.length || 0);
+
+    console.log('🔍 [STUDY ASSISTANT] Validating config...');
     this.validateConfig();
+    console.log('✅ [STUDY ASSISTANT] Config validated');
+
+    console.log('🔍 [STUDY ASSISTANT] Checking notes...');
+    console.log('📊 [STUDY ASSISTANT] Notes count:', this.notes.length);
 
     if (this.notes.length === 0) {
+      console.warn('⚠️  [STUDY ASSISTANT] No notes available');
       throw new Error('Study Assistant not initialized. Call initializeWithNotes first.');
     }
 
     try {
+      console.log('🔧 [STUDY ASSISTANT] Getting LLM instance...');
       const llm = this.getLLM('assistant');
+      console.log('✅ [STUDY ASSISTANT] LLM instance created');
 
       // Retrieve relevant notes
+      console.log('🔍 [STUDY ASSISTANT] Finding relevant notes...');
       const relevantNotes = this.findRelevantNotes(question);
+      console.log('📋 [STUDY ASSISTANT] Found', relevantNotes.length, 'relevant notes');
 
       // Format context
+      console.log('📝 [STUDY ASSISTANT] Formatting context...');
       const context = relevantNotes
         .map((note, i) => `[Note ${i + 1}: ${note.title}]\n${note.content}`)
         .join('\n\n');
+      console.log('📏 [STUDY ASSISTANT] Context length:', context.length, 'characters');
 
       // Format conversation history
+      console.log('📝 [STUDY ASSISTANT] Formatting history...');
       const history = conversationHistory
         .slice(-5)
         .map((msg) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
         .join('\n');
+      console.log('📏 [STUDY ASSISTANT] History length:', history.length, 'characters');
 
+      console.log('🔨 [STUDY ASSISTANT] Creating prompt template...');
       const ragPrompt = PromptTemplate.fromTemplate(`
 You are a helpful study assistant helping a student understand their notes.
 
@@ -105,12 +125,18 @@ Instructions:
 
 Your response:
 `);
+      console.log('✅ [STUDY ASSISTANT] Prompt template created');
 
+      console.log('⛓️  [STUDY ASSISTANT] Creating chain...');
       const chain = RunnableSequence.from([
         ragPrompt,
         llm,
         new StringOutputParser(),
       ]);
+      console.log('✅ [STUDY ASSISTANT] Chain created');
+
+      console.log('🚀 [STUDY ASSISTANT] Invoking chain (calling AI)...');
+      console.log('⏱️  [STUDY ASSISTANT] This may take 10-30 seconds...');
 
       const response = await chain.invoke({
         context: context || 'No relevant notes found.',
@@ -118,8 +144,35 @@ Your response:
         question,
       });
 
-      return response.trim();
+      console.log('✅ [STUDY ASSISTANT] Chain invoked successfully');
+      console.log('📏 [STUDY ASSISTANT] Raw response length:', response?.length || 0);
+      console.log('📝 [STUDY ASSISTANT] Raw response preview:', response?.substring(0, 150));
+
+      // Strip DeepSeek R1's thinking tags from the response
+      console.log('🧹 [STUDY ASSISTANT] Stripping thinking tags...');
+      const cleanedResponse = stripThinkingTags(response);
+      console.log('✅ [STUDY ASSISTANT] Response cleaned');
+      console.log('📏 [STUDY ASSISTANT] Cleaned response length:', cleanedResponse?.length || 0);
+      console.log('📝 [STUDY ASSISTANT] Cleaned response preview:', cleanedResponse?.substring(0, 150));
+      console.log('✅ [STUDY ASSISTANT] ask() completed successfully\n');
+
+      return cleanedResponse;
     } catch (error) {
+      console.error('\n💥 [STUDY ASSISTANT] ==================== ERROR ====================');
+      console.error('❌ [STUDY ASSISTANT] Error in ask()');
+      console.error('🔍 [STUDY ASSISTANT] Error type:', typeof error);
+      console.error('🔍 [STUDY ASSISTANT] Error constructor:', error?.constructor?.name);
+
+      if (error instanceof Error) {
+        console.error('📛 [STUDY ASSISTANT] Error name:', error.name);
+        console.error('📛 [STUDY ASSISTANT] Error message:', error.message);
+        console.error('📛 [STUDY ASSISTANT] Error stack:', error.stack);
+      } else {
+        console.error('📛 [STUDY ASSISTANT] Non-Error object:', error);
+      }
+
+      console.error('💥 [STUDY ASSISTANT] ==========================================\n');
+
       const aiError = this.handleError(error, 'ask');
       throw new Error(aiError.message);
     }
@@ -222,7 +275,7 @@ Return only valid JSON:
         content: content || 'No content available',
       });
 
-      return JSON.parse(result.trim());
+      return extractDeepSeekJSON(result);
     } catch (error) {
       const aiError = this.handleError(error, 'generateStudyPlan');
       throw new Error(aiError.message);

@@ -7,11 +7,11 @@ export const AI_CONFIG = {
   // Model configurations
   models: {
     openrouter: {
-      summarizer: 'minimax/minimax-01', // MiniMax 2 (free)
-      mindmap: 'minimax/minimax-01',
-      quiz: 'minimax/minimax-01',
-      assistant: 'minimax/minimax-01',
-      transcription: 'minimax/minimax-01', // Note: Use Whisper API separately for audio
+      summarizer: 'tngtech/deepseek-r1t2-chimera:free', // DeepSeek R1T2 Chimera (free)
+      mindmap: 'tngtech/deepseek-r1t2-chimera:free',
+      quiz: 'tngtech/deepseek-r1t2-chimera:free',
+      assistant: 'tngtech/deepseek-r1t2-chimera:free',
+      transcription: 'tngtech/deepseek-r1t2-chimera:free', // Note: Use Whisper API separately for audio
     },
   },
 
@@ -26,12 +26,13 @@ export const AI_CONFIG = {
     assistant: 0.7, // Higher for conversational responses
   },
 
-  // Max tokens
+  // Max tokens (optimized for DeepSeek R1T2 Chimera free tier)
+  // Note: DeepSeek R1T2 Chimera supports up to 8000 tokens output
   maxTokens: {
-    summarizer: 500,
-    mindmap: 1500,
-    quiz: 1000,
-    assistant: 2000,
+    summarizer: 2000,   // Increased for comprehensive summaries
+    mindmap: 4000,      // Large increase for complex mindmap structures
+    quiz: 6000,         // Very large for generating multiple flashcards/questions
+    assistant: 3000,    // Increased for detailed conversational responses
   },
 
   // OpenRouter specific settings

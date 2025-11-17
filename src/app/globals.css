@@ -79,3 +79,134 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
 }
+
+/* Editor settings */
+textarea,
+.editor-content,
+[contenteditable="true"] {
+  line-height: var(--editor-line-height, 1.6);
+}
+
+/* =======================
+   ACCENT COLOR VARIABLES
+   ======================= */
+:root {
+  /* Default accent colors (blue) - will be overridden by ThemeProvider */
+  --accent-primary: #3B82F6;
+  --accent-light: #DBEAFE;
+  --accent-hover: #2563EB;
+}
+
+/* Tailwind custom colors using CSS variables */
+@layer utilities {
+  .bg-accent-primary {
+    background-color: var(--accent-primary);
+  }
+  .bg-accent-light {
+    background-color: var(--accent-light);
+  }
+  .bg-accent-hover {
+    background-color: var(--accent-hover);
+  }
+  .text-accent-primary {
+    color: var(--accent-primary);
+  }
+  .border-accent-primary {
+    border-color: var(--accent-primary);
+  }
+  .ring-accent-primary {
+    --tw-ring-color: var(--accent-primary);
+  }
+  .focus\:ring-accent-primary:focus {
+    --tw-ring-color: var(--accent-primary);
+  }
+}
+
+/* =======================
+   UI DENSITY CLASSES
+   ======================= */
+/* These classes are reserved for future use when components are properly tagged.
+   Currently disabled to prevent overriding Tailwind utility classes.
+   Components should use explicit Tailwind classes (p-4, gap-3, etc.) */
+
+/* =======================
+   REDUCED MOTION
+   ======================= */
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Manual reduced motion class */
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* =======================
+   GPU ACCELERATION
+   ======================= */
+body.gpu-accelerated {
+  /* Apply GPU acceleration to frequently animated elements */
+  .note-card,
+  .workspace-card,
+  .sidebar-item,
+  button,
+  [role="button"] {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* Optimized scrolling */
+  .scroll-container,
+  .notes-list,
+  .sidebar {
+    will-change: scroll-position;
+  }
+}
+
+/* =======================
+   ACCESSIBILITY UTILITIES
+   ======================= */
+/* Focus visible styles */
+*:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Remove focus outline from text inputs */
+input[type="text"]:focus-visible,
+input[type="search"]:focus-visible,
+textarea:focus-visible,
+[contenteditable="true"]:focus-visible {
+  outline: none;
+}
+
+/* Skip to content link */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  z-index: 999;
+  padding: 1rem;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.skip-to-content:focus {
+  left: 50%;
+  transform: translateX(-50%);
+  top: 1rem;
+}

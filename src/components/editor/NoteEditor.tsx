@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNotesStore } from '@/lib/store/useNotesStore';
-import { X, ImagePlus } from 'lucide-react';
+import { useSettingsStore } from '@/lib/store/useSettingsStore';
+import { X, ImagePlus, Save, CheckCircle2 } from 'lucide-react';
 import { Note, NoteImage, AudioRecording } from '@/lib/store/types';
 import { VersionHistory } from './VersionHistory';
 import { useImageDrop, ImageDropResult } from '@/hooks/useImageDrop';
@@ -27,6 +28,7 @@ interface NoteEditorProps {
 
 export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
   const { addNote, updateNote, activeWorkspaceId } = useNotesStore();
+  const { settings } = useSettingsStore();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -51,6 +53,8 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [generatedFlashcards, setGeneratedFlashcards] = useState<FlashcardSet | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Handle image drops
   const handleImageDrop = (image: ImageDropResult) => {
@@ -81,9 +85,61 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
       }
       setTagInput('');
       setShowPassiveHint(false);
+      setHasUnsavedChanges(false);
+      setLastSaved(null);
       clearSuggestion();
     }
   }, [note, isOpen, clearSuggestion]);
+
+  // Track unsaved changes
+  useEffect(() => {
+    if (note && isOpen) {
+      const hasChanges =
+        title !== note.title ||
+        content !== note.content ||
+        JSON.stringify(tags) !== JSON.stringify(note.tags) ||
+        JSON.stringify(images) !== JSON.stringify(note.images || []) ||
+        JSON.stringify(audioRecordings) !== JSON.stringify(note.audioRecordings || []);
+
+      setHasUnsavedChanges(hasChanges);
+    }
+  }, [title, content, tags, images, audioRecordings, note, isOpen]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (!settings.autoSave) {
+      return;
+    }
+
+    if (!note) {
+      return;
+    }
+
+    if (!hasUnsavedChanges) {
+      return;
+    }
+
+    if (!title.trim() && !content.trim()) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      updateNote(note.id, {
+        title,
+        content,
+        tags,
+        images,
+        audioRecordings,
+      });
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+    }, settings.autoSaveDelay * 1000); // Convert seconds to milliseconds
+
+    return () => {
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, content, tags, images, audioRecordings, settings.autoSave, settings.autoSaveDelay, note?.id, hasUnsavedChanges]);
 
   // Detect long paragraphs and show passive hints
   useEffect(() => {
@@ -115,6 +171,8 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
         images,
         audioRecordings,
       });
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
     } else {
       addNote({
         title,
@@ -128,6 +186,20 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
     }
 
     onClose();
+  };
+
+  const handleManualSave = () => {
+    if (!note || !hasUnsavedChanges) return;
+
+    updateNote(note.id, {
+      title,
+      content,
+      tags,
+      images,
+      audioRecordings,
+    });
+    setLastSaved(new Date());
+    setHasUnsavedChanges(false);
   };
 
   const removeImage = (imageId: string) => {
@@ -244,7 +316,8 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title || 'Untitled Note',
-          content
+          content,
+          count: 15
         }),
       });
 
@@ -294,7 +367,7 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
         body: JSON.stringify({
           title: title || 'Untitled Note',
           content,
-          count: 8 // Generate 8 flashcards by default
+          count: 20 // Generate 20 flashcards by default
         }),
       });
 
@@ -327,10 +400,48 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-[--color-text-black]">
-            {note ? 'Edit Note' : 'New Note'}
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-[--color-text-black]">
+              {note ? 'Edit Note' : 'New Note'}
+            </h2>
+            {note && (
+              <div className="flex items-center gap-2 text-sm">
+                {settings.autoSave ? (
+                  lastSaved ? (
+                    <div className="flex items-center gap-1.5 text-green-600">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Auto-saved</span>
+                    </div>
+                  ) : hasUnsavedChanges ? (
+                    <span className="text-gray-500">Auto-saving in {settings.autoSaveDelay}s...</span>
+                  ) : null
+                ) : hasUnsavedChanges ? (
+                  <span className="text-orange-600 font-medium">● Unsaved changes</span>
+                ) : lastSaved ? (
+                  <div className="flex items-center gap-1.5 text-green-600">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Saved</span>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2">
+            {note && !settings.autoSave && (
+              <button
+                onClick={handleManualSave}
+                disabled={!hasUnsavedChanges}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: hasUnsavedChanges ? '#63cdff' : 'var(--bg-tertiary)',
+                  color: hasUnsavedChanges ? '#121421' : 'var(--text-secondary)',
+                }}
+                title={hasUnsavedChanges ? 'Save changes' : 'No changes to save'}
+              >
+                <Save className="w-4 h-4" />
+                Save
+              </button>
+            )}
             {note && <VersionHistory noteId={note.id} />}
             <button
               onClick={onClose}
@@ -374,6 +485,7 @@ export function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
             placeholder="Start writing your note..."
             value={content}
             onChange={(e) => setContent(e.target.value)}
+            spellCheck={settings.spellCheck}
             className="w-full min-h-[300px] text-gray-700 placeholder-gray-400 border-none outline-none resize-none"
           />
 

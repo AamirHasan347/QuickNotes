@@ -5,9 +5,8 @@
 
 import { PromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { BaseAIService } from './base-service';
-import { AIProvider } from './types';
-import { parseAIJson } from './utils';
+import { BaseAIService, AIServiceOptions } from './base-service';
+import { extractDeepSeekJSON } from '@/lib/utils/json-extractor';
 import { Node, Edge } from '@xyflow/react';
 
 export interface NodeCluster {
@@ -34,8 +33,8 @@ export interface NodeRelationship {
 }
 
 export class MindmapOrganizerService extends BaseAIService {
-  constructor(provider?: AIProvider) {
-    super(provider);
+  constructor(options?: AIServiceOptions) {
+    super(options);
   }
 
   /**
@@ -93,7 +92,21 @@ JSON response:
         nodes: JSON.stringify(nodeData, null, 2),
       });
 
-      const parsed = parseAIJson(result);
+      // Debug logging
+      console.log('\n🗺️  [MINDMAP ORGANIZER - Cluster] Raw AI Response:');
+      console.log('📏 Response length:', result?.length || 0);
+      console.log('🔍 Has <think> tags:', /<think>/.test(result || ''));
+
+      let parsed;
+      try {
+        parsed = extractDeepSeekJSON(result);
+        console.log('✅ [MINDMAP ORGANIZER - Cluster] JSON parsed successfully');
+        console.log('📊 Clusters found:', parsed.length || 0);
+      } catch (error) {
+        console.error('❌ [MINDMAP ORGANIZER - Cluster] JSON parsing failed:', error);
+        console.error('📛 Raw response:', result);
+        throw new Error('AI returned malformed cluster data. Please try again.');
+      }
 
       // Validate and add default positions
       return this.validateAndEnrichClusters(parsed, nodes);
@@ -149,7 +162,22 @@ JSON response:
         nodes: JSON.stringify(nodeData, null, 2),
       });
 
-      return parseAIJson(result);
+      // Debug logging
+      console.log('\n🗺️  [MINDMAP ORGANIZER - Relationships] Raw AI Response:');
+      console.log('📏 Response length:', result?.length || 0);
+      console.log('🔍 Has <think> tags:', /<think>/.test(result || ''));
+
+      try {
+        const parsed = extractDeepSeekJSON(result);
+        console.log('✅ [MINDMAP ORGANIZER - Relationships] JSON parsed successfully');
+        console.log('📊 Relationships found:', parsed.length || 0);
+        return parsed;
+      } catch (error) {
+        console.error('❌ [MINDMAP ORGANIZER - Relationships] JSON parsing failed:', error);
+        console.error('📛 Raw response:', result);
+        // Return empty array on error instead of throwing
+        return [];
+      }
     } catch (error) {
       console.error('Error identifying relationships:', error);
       return [];

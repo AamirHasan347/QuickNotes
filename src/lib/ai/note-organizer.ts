@@ -5,9 +5,8 @@
 
 import { PromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { BaseAIService } from './base-service';
-import { AIProvider } from './types';
-import { parseAIJson } from './utils';
+import { BaseAIService, AIServiceOptions } from './base-service';
+import { extractDeepSeekJSON } from '@/lib/utils/json-extractor';
 import { Note, SmartWorkspace, Folder } from '../store/types';
 
 export interface OrganizationSuggestion {
@@ -36,8 +35,8 @@ export interface BatchSuggestionResult {
 }
 
 export class NoteOrganizerService extends BaseAIService {
-  constructor(provider?: AIProvider) {
-    super(provider);
+  constructor(options?: AIServiceOptions) {
+    super(options);
   }
 
   /**
@@ -127,8 +126,22 @@ JSON response:
         folders: folderContext || 'No folders yet',
       });
 
+      // Debug logging
+      console.log('\n📁 [NOTE ORGANIZER] Raw AI Response:');
+      console.log('📏 Response length:', result?.length || 0);
+      console.log('🔍 Has <think> tags:', /<think>/.test(result || ''));
+
       // Parse JSON response
-      const parsed = parseAIJson(result);
+      let parsed;
+      try {
+        parsed = extractDeepSeekJSON(result);
+        console.log('✅ [NOTE ORGANIZER] JSON parsed successfully');
+        console.log('📊 Suggestion type:', parsed.type);
+      } catch (error) {
+        console.error('❌ [NOTE ORGANIZER] JSON parsing failed:', error);
+        console.error('📛 Raw response:', result);
+        throw new Error('AI returned malformed organization data. Please try again.');
+      }
 
       // Build suggestion object
       const suggestion: OrganizationSuggestion = {

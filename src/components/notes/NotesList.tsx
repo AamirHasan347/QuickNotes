@@ -2,6 +2,7 @@
 
 import { useNotesStore } from '@/lib/store/useNotesStore';
 import { useSmartWorkspaceStore } from '@/lib/store/useSmartWorkspaceStore';
+import { useSettingsStore } from '@/lib/store/useSettingsStore';
 import { NoteCard } from './NoteCard';
 import { SortableNoteCard } from './SortableNoteCard';
 import { FileText } from 'lucide-react';
@@ -32,6 +33,7 @@ export function NotesList({ onNoteClick, onOpenMindmap }: NotesListProps) {
   const [isClient, setIsClient] = useState(false);
   const { getNotesInWorkspace, getNotesInFolder, notes, reorderNotes } = useNotesStore();
   const { activeWorkspaceId, activeFolderId } = useSmartWorkspaceStore();
+  const { settings } = useSettingsStore();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -86,8 +88,30 @@ export function NotesList({ onNoteClick, onOpenMindmap }: NotesListProps) {
   }
   // If neither is selected, allNotes remains empty (splash screen will show)
 
-  const pinnedNotes = allNotes.filter(note => note.isPinned);
-  const unpinnedNotes = allNotes.filter(note => !note.isPinned);
+  // Apply sorting based on settings
+  const sortedNotes = [...allNotes].sort((a, b) => {
+    let comparison = 0;
+
+    switch (settings.sortBy) {
+      case 'updated':
+        comparison = new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        break;
+      case 'created':
+        comparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        break;
+      case 'title':
+        comparison = a.title.localeCompare(b.title);
+        break;
+      default:
+        comparison = 0;
+    }
+
+    // Apply sort order (asc or desc)
+    return settings.sortOrder === 'asc' ? -comparison : comparison;
+  });
+
+  const pinnedNotes = sortedNotes.filter(note => note.isPinned);
+  const unpinnedNotes = sortedNotes.filter(note => !note.isPinned);
 
   if (allNotes.length === 0) {
     return (
@@ -110,37 +134,59 @@ export function NotesList({ onNoteClick, onOpenMindmap }: NotesListProps) {
       onDragEnd={handleDragEnd}
     >
       <div className="space-y-6">
-        {pinnedNotes.length > 0 && (
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-tertiary)' }}>
-              Pinned
-            </h2>
-            <SortableContext items={pinnedNotes.map(n => n.id)} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pinnedNotes.map((note) => (
-                  <SortableNoteCard
-                    key={note.id}
-                    note={note}
-                    onClick={() => onNoteClick(note)}
-                    onLinkClick={handleLinkClick}
-                    onOpenMindmap={onOpenMindmap}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </div>
-        )}
-
-        {unpinnedNotes.length > 0 && (
-          <div>
+        {settings.showPinned ? (
+          // Show pinned notes in separate section
+          <>
             {pinnedNotes.length > 0 && (
-              <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-tertiary)' }}>
-                All Notes
-              </h2>
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-tertiary)' }}>
+                  Pinned
+                </h2>
+                <SortableContext items={pinnedNotes.map(n => n.id)} strategy={rectSortingStrategy}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {pinnedNotes.map((note) => (
+                      <SortableNoteCard
+                        key={note.id}
+                        note={note}
+                        onClick={() => onNoteClick(note)}
+                        onLinkClick={handleLinkClick}
+                        onOpenMindmap={onOpenMindmap}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </div>
             )}
-            <SortableContext items={unpinnedNotes.map(n => n.id)} strategy={rectSortingStrategy}>
+
+            {unpinnedNotes.length > 0 && (
+              <div>
+                {pinnedNotes.length > 0 && (
+                  <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-tertiary)' }}>
+                    All Notes
+                  </h2>
+                )}
+                <SortableContext items={unpinnedNotes.map(n => n.id)} strategy={rectSortingStrategy}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {unpinnedNotes.map((note) => (
+                      <SortableNoteCard
+                        key={note.id}
+                        note={note}
+                        onClick={() => onNoteClick(note)}
+                        onLinkClick={handleLinkClick}
+                        onOpenMindmap={onOpenMindmap}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </div>
+            )}
+          </>
+        ) : (
+          // Don't show pinned section separately - combine all notes
+          <div>
+            <SortableContext items={sortedNotes.map(n => n.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {unpinnedNotes.map((note) => (
+                {sortedNotes.map((note) => (
                   <SortableNoteCard
                     key={note.id}
                     note={note}

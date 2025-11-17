@@ -6,12 +6,16 @@ interface InlineSketchCanvasProps {
   currentDrawing: Drawing | null;
   onUpdate: (drawing: Drawing) => void;
   canvasHook: ReturnType<typeof useInfiniteCanvas>;
+  guideLines?: 'none' | 'dots' | 'single-line' | 'grid';
+  theme?: 'light' | 'dark' | 'auto';
 }
 
 const InlineSketchCanvas: React.FC<InlineSketchCanvasProps> = ({
   currentDrawing,
   onUpdate,
   canvasHook,
+  guideLines = 'none',
+  theme = 'light',
 }) => {
   const {
     canvasRef,
@@ -27,6 +31,37 @@ const InlineSketchCanvas: React.FC<InlineSketchCanvasProps> = ({
     handleWheel,
   } = canvasHook;
 
+  // Guide lines background style generator
+  const getGuideLineStyle = (): React.CSSProperties => {
+    const isDark = theme === 'dark';
+    const lineColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
+    const dotColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)';
+
+    switch (guideLines) {
+      case 'dots':
+        return {
+          backgroundImage: `radial-gradient(circle, ${dotColor} 2px, transparent 2px)`,
+          backgroundSize: '25px 25px',
+        };
+      case 'single-line':
+        return {
+          backgroundImage: `linear-gradient(${lineColor} 1.5px, transparent 1.5px)`,
+          backgroundSize: '100% 40px',
+        };
+      case 'grid':
+        return {
+          backgroundImage: `
+            linear-gradient(${lineColor} 1.5px, transparent 1.5px),
+            linear-gradient(90deg, ${lineColor} 1.5px, transparent 1.5px)
+          `,
+          backgroundSize: '40px 40px',
+        };
+      case 'none':
+      default:
+        return {};
+    }
+  };
+
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,7 +76,7 @@ const InlineSketchCanvas: React.FC<InlineSketchCanvasProps> = ({
   }, []);
 
   return (
-    <div ref={containerRef} className="w-full h-full min-h-[500px] relative" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div ref={containerRef} className="w-full h-full min-h-[500px] relative" style={{ backgroundColor: 'var(--bg-primary)', ...getGuideLineStyle() }}>
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}

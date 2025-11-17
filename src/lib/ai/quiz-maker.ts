@@ -5,13 +5,13 @@
 
 import { PromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { BaseAIService } from './base-service';
-import { Quiz, Flashcard, AIProvider } from './types';
-import { parseAIJson } from './utils';
+import { BaseAIService, AIServiceOptions } from './base-service';
+import { Quiz, Flashcard } from './types';
+import { extractDeepSeekJSON } from '@/lib/utils/json-extractor';
 
 export class QuizMakerService extends BaseAIService {
-  constructor(provider?: AIProvider) {
-    super(provider);
+  constructor(options?: AIServiceOptions) {
+    super(options);
   }
 
   /**
@@ -20,7 +20,7 @@ export class QuizMakerService extends BaseAIService {
   async generateFlashcards(
     title: string,
     content: string,
-    count: number = 5
+    count: number = 15
   ): Promise<Quiz> {
     this.validateConfig();
 
@@ -30,7 +30,7 @@ export class QuizMakerService extends BaseAIService {
       const mcqPrompt = PromptTemplate.fromTemplate(`
 You are an expert at creating multiple choice quiz questions from educational content.
 
-Given the following note, create {count} high-quality MCQ questions that:
+Given the following note, create up to {count} high-quality MCQ questions that:
 - Test understanding of key concepts
 - Have 4 plausible options each
 - Include helpful hints when appropriate
@@ -70,6 +70,7 @@ CRITICAL REQUIREMENTS:
 - Make distractors plausible but clearly wrong upon understanding
 - Difficulty: easy (recall), medium (understanding), hard (application/analysis)
 - estimatedTime in minutes (roughly 2 min per question)
+- Generate up to {count} questions based on content length (fewer only if content is very short)
 
 Return ONLY valid JSON, no markdown formatting:
 `);
@@ -79,10 +80,25 @@ Return ONLY valid JSON, no markdown formatting:
       const result = await chain.invoke({
         title: title || 'Untitled Note',
         content: content || '',
-        count: Math.min(count, 10), // Cap at 10 questions for better quality
+        count: Math.min(count, 25), // Cap at 25 questions for better quality
       });
 
-      const parsed = parseAIJson(result);
+      // Debug logging
+      console.log('\n📝 [QUIZ MAKER - Flashcards] Raw AI Response:');
+      console.log('📏 Response length:', result?.length || 0);
+      console.log('📝 First 300 chars:', result?.substring(0, 300));
+      console.log('🔍 Has <think> tags:', /<think>/.test(result || ''));
+
+      let parsed;
+      try {
+        parsed = extractDeepSeekJSON(result);
+        console.log('✅ [QUIZ MAKER - Flashcards] JSON parsed successfully');
+        console.log('📊 Flashcards count:', parsed.flashcards?.length || 0);
+      } catch (error) {
+        console.error('❌ [QUIZ MAKER - Flashcards] JSON parsing failed:', error);
+        console.error('📛 Raw response:', result);
+        throw new Error('AI returned malformed quiz data. Please try again.');
+      }
 
       return {
         title: parsed.title || `${title} - Quiz`,
@@ -103,7 +119,7 @@ Return ONLY valid JSON, no markdown formatting:
   async generateMultipleChoice(
     title: string,
     content: string,
-    count: number = 5
+    count: number = 15
   ): Promise<any> {
     this.validateConfig();
 
@@ -113,7 +129,7 @@ Return ONLY valid JSON, no markdown formatting:
       const mcqPrompt = PromptTemplate.fromTemplate(`
 You are an expert at creating multiple choice questions from educational content.
 
-Given the following note, create {count} multiple choice questions with:
+Given the following note, create up to {count} multiple choice questions with:
 - 1 correct answer
 - 3 plausible distractors
 - Varying difficulty levels
@@ -137,6 +153,7 @@ Return as JSON:
   ]
 }}
 
+Generate up to {count} questions based on content length (fewer only if content is very short).
 Return only valid JSON:
 `);
 
@@ -145,10 +162,23 @@ Return only valid JSON:
       const result = await chain.invoke({
         title: title || 'Untitled Note',
         content: content || '',
-        count: Math.min(count, 15),
+        count: Math.min(count, 25),
       });
 
-      return parseAIJson(result);
+      // Debug logging
+      console.log('\n📝 [QUIZ MAKER - MCQ] Raw AI Response:');
+      console.log('📏 Response length:', result?.length || 0);
+      console.log('🔍 Has <think> tags:', /<think>/.test(result || ''));
+
+      try {
+        const parsed = extractDeepSeekJSON(result);
+        console.log('✅ [QUIZ MAKER - MCQ] JSON parsed successfully');
+        return parsed;
+      } catch (error) {
+        console.error('❌ [QUIZ MAKER - MCQ] JSON parsing failed:', error);
+        console.error('📛 Raw response:', result);
+        throw new Error('AI returned malformed MCQ data. Please try again.');
+      }
     } catch (error) {
       const aiError = this.handleError(error, 'generateMultipleChoice');
       throw new Error(aiError.message);
@@ -161,7 +191,7 @@ Return only valid JSON:
   async generateFillInBlanks(
     title: string,
     content: string,
-    count: number = 10
+    count: number = 15
   ): Promise<any> {
     this.validateConfig();
 
@@ -169,7 +199,7 @@ Return only valid JSON:
       const llm = this.getLLM('quiz');
 
       const fibPrompt = PromptTemplate.fromTemplate(`
-Create {count} fill-in-the-blank questions from this content.
+Create up to {count} fill-in-the-blank questions from this content.
 
 Note Title: {title}
 Note Content: {content}
@@ -187,6 +217,7 @@ Return as JSON:
   ]
 }}
 
+Generate up to {count} questions based on content length (fewer only if content is very short).
 Return only valid JSON:
 `);
 
@@ -195,10 +226,23 @@ Return only valid JSON:
       const result = await chain.invoke({
         title: title || 'Untitled Note',
         content: content || '',
-        count: Math.min(count, 15),
+        count: Math.min(count, 25),
       });
 
-      return parseAIJson(result);
+      // Debug logging
+      console.log('\n📝 [QUIZ MAKER - Fill in Blanks] Raw AI Response:');
+      console.log('📏 Response length:', result?.length || 0);
+      console.log('🔍 Has <think> tags:', /<think>/.test(result || ''));
+
+      try {
+        const parsed = extractDeepSeekJSON(result);
+        console.log('✅ [QUIZ MAKER - Fill in Blanks] JSON parsed successfully');
+        return parsed;
+      } catch (error) {
+        console.error('❌ [QUIZ MAKER - Fill in Blanks] JSON parsing failed:', error);
+        console.error('📛 Raw response:', result);
+        throw new Error('AI returned malformed fill-in-blanks data. Please try again.');
+      }
     } catch (error) {
       const aiError = this.handleError(error, 'generateFillInBlanks');
       throw new Error(aiError.message);
@@ -210,7 +254,7 @@ Return only valid JSON:
    */
   async generateFromMultipleNotes(
     notes: Array<{ title: string; content: string }>,
-    count: number = 10
+    count: number = 15
   ): Promise<Quiz> {
     const combinedTitle = 'Combined Notes Quiz';
     const combinedContent = notes

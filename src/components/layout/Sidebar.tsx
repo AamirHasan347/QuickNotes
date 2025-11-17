@@ -2,7 +2,7 @@
 
 import { useNotesStore } from '@/lib/store/useNotesStore';
 import { useSmartWorkspaceStore } from '@/lib/store/useSmartWorkspaceStore';
-import { Search, Settings, Calendar, ChevronLeft } from 'lucide-react';
+import { Search, Settings, Calendar, ChevronLeft, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -114,6 +114,20 @@ export function Sidebar({ onSearchClick, onTodayClick, onToggleFocus, isFocusMod
         >
           <Calendar className="w-4 h-4" />
           <span>Today's Note</span>
+        </button>
+
+        <button
+          onClick={() => router.push('/chat')}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
+          style={{
+            color: 'var(--text-secondary)',
+            background: 'linear-gradient(to right, rgba(142, 242, 146, 0.1), rgba(99, 205, 255, 0.1))'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, rgba(142, 242, 146, 0.2), rgba(99, 205, 255, 0.2))'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, rgba(142, 242, 146, 0.1), rgba(99, 205, 255, 0.1))'}
+        >
+          <MessageSquare className="w-4 h-4" />
+          <span>AI Chat</span>
         </button>
       </div>
 
